@@ -5,6 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "exp": "node ./exp",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
