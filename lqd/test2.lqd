@@ -1,1 +1,1 @@
-let myFun = fun a:T = not a.1 in myFun (true, 100)
+let myFun = async fun a:T = not a.1 in myFun (true, 100)

@@ -11,6 +11,7 @@ const CONSTRUCTS = [
 ];
 
 const KEYWORDS = [
+  'async',
   'fun',
   'let',
   'in',
