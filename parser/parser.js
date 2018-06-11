@@ -14,13 +14,13 @@ module.exports = class Parser {
     while (this.head < tokens.length) {
       const token = tokens[this.head];
 
-      switch (token.type) {
-        case Token.LITERAL:
+      // switch (token.kind) {
+      //   case Token.LITERAL:
           ast.type = 'Literal';
           ast.value = token.value === 'true' ? true : false;
           this.head++;
-          break;
-      }
+      //     break;
+      // }
     }
 
     console.log(ast);

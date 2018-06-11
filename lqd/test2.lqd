@@ -1,0 +1,1 @@
+let myFun = fun a:T = not a.1 in myFun (true, 100)
