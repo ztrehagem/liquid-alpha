@@ -21,6 +21,9 @@ const Token = {
   IDENTIFIER: 'identifier',
   CONSTRUCT: 'construct',
   KEYWORD: 'keyword',
+};
+
+const factory = {
   literal: (type, value) => ({
     kind: Token.LITERAL,
     type,
@@ -97,7 +100,7 @@ class Tokenizer {
     const { index } = match;
     if (CONSTRUCTS.includes(construct)) {
       this.head += index + construct.length;
-      return Token.construct(construct);
+      return factory.construct(construct);
     }
     return null;
   }
@@ -113,30 +116,32 @@ class Tokenizer {
 
   asKeyword(word) {
     if (KEYWORDS.includes(word)) {
-      return Token.keyword(word);
+      return factory.keyword(word);
     }
     return null;
   }
 
   asLiteral(word) {
     if (word === 'true' || word === 'false') {
-      return Token.literal('boolean', word === 'true');
+      return factory.literal('boolean', word === 'true');
     }
     if (word.match(/^\d+(?:\.\d+)?$/)) {
-      return Token.literal('number', parseFloat(word));
+      return factory.literal('number', parseFloat(word));
     }
     return null;
   }
 
   asIdentifier(word) {
     if (word.match(/^[A-Za-z_]\w*$/)) {
-      return Token.identifier(word);
+      return factory.identifier(word);
     }
     return null;
   }
 }
 
 module.exports = {
+  CONSTRUCTS,
+  KEYWORDS,
   Token,
   Tokenizer,
 };
