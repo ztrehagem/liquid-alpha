@@ -1,50 +1,6 @@
-const SPACES = [' ', '\n'];
+const { Keyword, Construct, Identifier, Literal } = require('./token');
 
-const CONSTRUCTS = [
-  '(',
-  ')',
-  '.1',
-  '.2',
-  ',',
-  '=',
-  ':',
-];
-
-const KEYWORDS = [
-  'async',
-  'fun',
-  'let',
-  'in',
-];
-
-const Token = {
-  LITERAL: 'literal',
-  IDENTIFIER: 'identifier',
-  CONSTRUCT: 'construct',
-  KEYWORD: 'keyword',
-};
-
-const factory = {
-  literal: (type, value) => ({
-    kind: Token.LITERAL,
-    type,
-    value,
-  }),
-  identifier: (label) => ({
-    kind: Token.IDENTIFIER,
-    label,
-  }),
-  construct: (str) => ({
-    kind: Token.CONSTRUCT,
-    str,
-  }),
-  keyword: (str) => ({
-    kind: Token.KEYWORD,
-    str,
-  }),
-};
-
-class Tokenizer {
+class Lexer {
   constructor(code) {
     this.code = code;
     this.head = 0;
@@ -97,11 +53,11 @@ class Tokenizer {
   tryAsConstruct() {
     const match = this.code.substring(this.head).match(/^\.[12]|[^ \n]/);
     if (!match) return null;
-    const [ construct ] = match;
+    const [ str ] = match;
     const { index } = match;
-    if (CONSTRUCTS.includes(construct)) {
-      this.head += index + construct.length;
-      return factory.construct(construct);
+    if (Object.values(Construct.kinds).includes(str)) {
+      this.head += index + str.length;
+      return new Construct(str);
     }
     return null;
   }
@@ -116,33 +72,32 @@ class Tokenizer {
   }
 
   asKeyword(word) {
-    if (KEYWORDS.includes(word)) {
-      return factory.keyword(word);
+    if (Object.values(Keyword.kinds).includes(word)) {
+      return new Keyword(word);
     }
     return null;
   }
 
   asLiteral(word) {
     if (word === 'true' || word === 'false') {
-      return factory.literal('boolean', word === 'true');
+      // return new Literal(word === 'true');
+      return new Literal(word);
     }
     if (word.match(/^\d+(?:\.\d+)?$/)) {
-      return factory.literal('number', parseFloat(word));
+      // return new Literal(parseFloat(word));
+      return new Literal(word);
     }
     return null;
   }
 
   asIdentifier(word) {
     if (word.match(/^[A-Za-z_]\w*$/)) {
-      return factory.identifier(word);
+      return new Identifier(word);
     }
     return null;
   }
 }
 
 module.exports = {
-  CONSTRUCTS,
-  KEYWORDS,
-  Token,
-  Tokenizer,
+  Lexer,
 };
