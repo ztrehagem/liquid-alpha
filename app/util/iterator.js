@@ -3,16 +3,21 @@ module.exports = class Iterator {
     this.array = [...array];
   }
 
+  // next() {
+  //   const value = this.array.shift();
+  //   return { value, done: !this.array.length };
+  // }
+
+  // shift() {
   next() {
-    const value = this.array.shift();
-    return { value, done: !this.array.length };
+    return this.array.shift();
   }
 
   peek() {
     return this.array[0];
   }
 
-  [Symbol.iterator]() {
-    return this;
-  }
+  // [Symbol.iterator]() {
+  //   return this;
+  // }
 }
