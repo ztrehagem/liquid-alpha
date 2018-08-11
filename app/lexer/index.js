@@ -1,4 +1,4 @@
-const { Keyword, Construct, Identifier, Literal } = require('./token');
+const { Keyword, Construct, Identifier, Primitive, Literal } = require('./token');
 
 class Lexer {
   constructor(code) {
@@ -30,6 +30,13 @@ class Lexer {
         continue;
       }
 
+      // プリミティブ
+      const primitive = this.asPrimitive(word);
+      if (primitive) {
+        this.tokens.push(primitive);
+        continue;
+      }
+
       // リテラル
       const literal = this.asLiteral(word);
       if (literal) {
@@ -51,10 +58,13 @@ class Lexer {
   }
 
   tryAsConstruct() {
-    const match = this.code.substring(this.head).match(/^\.[12]|[^ \n]/);
+    // console.log('tryAsConstruct', this.code.substring(this.head, this.head + 10));
+    
+    const match = this.code.substring(this.head).match(/^\.[12]|\S/);
     if (!match) return null;
-    const [ word ] = match;
+    let [ word ] = match;
     const { index } = match;
+    if (word === '-') [ word ] = this.code.substring(this.head + index).match(/^->a?/);
     const [ key ] = Object.entries(Construct.kinds).find(([ key, str ]) => str === word) || [];
     if (!key) return null;
     this.head += index + word.length;
@@ -77,13 +87,20 @@ class Lexer {
   }
 
   asLiteral(word) {
-    if (word === 'true' || word === 'false') {
+    if ('true false'.split(' ').includes(word)) { // Bool
       // return new Literal(word === 'true'); // jsプリミティブに変換
       return new Literal(word);
     }
-    if (word.match(/^\d+(?:\.\d+)?$/)) {
+    if (word.match(/^\d+(?:\.\d+)?$/)) { // Number
       // return new Literal(parseFloat(word)); // jsプリミティブに変換
       return new Literal(word);
+    }
+    return null;
+  }
+
+  asPrimitive(word) {
+    if ('and not Bool'.split(' ').includes(word)) {
+      return new Primitive(word);
     }
     return null;
   }

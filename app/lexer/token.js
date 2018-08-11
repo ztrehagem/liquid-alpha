@@ -1,4 +1,5 @@
 const LITERAL = 'literal';
+const PRIMITIVE = 'primitive';
 const IDENTIFIER = 'identifier';
 const CONSTRUCT = 'construct';
 const KEYWORD = 'keyword';
@@ -45,6 +46,8 @@ Construct.kinds = {
   COMMA: ',',
   EQUAL: '=',
   COLON: ':',
+  ARROW: '->',
+  AARROW: '->a',
 };
 for (const [key, str] of Object.entries(Construct.kinds)) {
   Construct[key] = new Construct(str);
@@ -52,10 +55,17 @@ for (const [key, str] of Object.entries(Construct.kinds)) {
 
 class Identifier extends Token {
   constructor(str) {
-    super(IDENTIFIER, str)
+    super(IDENTIFIER, str);
   }
 }
 Identifier.toString = () => "Identifier";
+
+class Primitive extends Token {
+  constructor(str) {
+    super(PRIMITIVE, str);
+  }
+}
+Primitive.toString = () => "Primitive";
 
 class Literal extends Token {
   constructor(str) {
@@ -69,5 +79,6 @@ module.exports = {
   Keyword,
   Construct,
   Identifier,
+  Primitive,
   Literal,
 };

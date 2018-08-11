@@ -1,25 +1,40 @@
-class Variable {
+class Term {
+
+}
+
+class Variable extends Term {
   constructor(label) {
-    this.label = label;
+    super();
+    this.label = label.toString();
   }
 }
 
-class Instance {
+class Primitive extends Term {
   constructor(str) {
-    this.str = str;
+    super();
+    this.str = str.toString();
   }
 }
 
-class Let {
+class Literal extends Term {
+  constructor(str) {
+    super();
+    this.str = str.toString();
+  }
+}
+
+class Let extends Term {
   constructor(arg, bound, body) {
+    super();
     this.arg = arg;
     this.bound = bound;
     this.body = body;
   }
 }
 
-class Fun {
+class Fun extends Term {
   constructor(arg, type, body, async = false) {
+    super();
     this.arg = arg;
     this.type = type;
     this.body = body;
@@ -33,35 +48,68 @@ class AsyncFun extends Fun {
   }
 }
 
-class Pair {
+class Pair extends Term {
   constructor(car, cdr) {
+    super();
     this.car = car;
     this.cdr = cdr;
   }
 }
 
-class PairCar {
+class PairCar extends Term {
   constructor(pair) {
+    super();
     this.pair = pair;
   }
 }
 
-class PairCdr {
+class PairCdr extends Term {
   constructor(pair) {
+    super();
     this.pair = pair;
   }
 }
 
-class Application {
+class Application extends Term {
   constructor(t1, t2) {
-    this.fun = t1;
-    this.arg = t2;
+    super();
+    this.t1 = t1;
+    this.t2 = t2;
+  }
+}
+
+class Type extends Term {
+  constructor(str, fun = false) {
+    super();
+    this.str = str.toString();
+    this.fun = fun;
+  }
+
+  toString() {
+    return this.str;
+  }
+}
+
+class FunType extends Type {
+  constructor(from, to, async = false) {
+    super(`${from.fun ? `(${from})` : from} ${async ? '->a' : '->' } ${to}`, true);
+    this.from = from;
+    this.to = to;
+    this.async = async;
+  }
+}
+
+class AsyncFunType extends Type {
+  constructor(from, to) {
+    super(from, to, true);
   }
 }
 
 module.exports = {
+  Term,
   Variable,
-  Instance,
+  Primitive,
+  Literal,
   Let,
   Fun,
   AsyncFun,
@@ -69,4 +117,7 @@ module.exports = {
   PairCar,
   PairCdr,
   Application,
+  Type,
+  FunType,
+  AsyncFunType,
 };

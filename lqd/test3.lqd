@@ -1,0 +1,9 @@
+let g =
+  fun x: Bool =
+    async fun y: Bool =
+      and (x, y)
+in
+  let f =
+    (g true)
+  in
+    (f false)
