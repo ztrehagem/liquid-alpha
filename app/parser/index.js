@@ -25,59 +25,6 @@ class Parser {
     return this.getTerm();
   }
 
-  getTerm_() {
-    let term = null;
-    const token = this.it.peek();
-    // literal
-    // identifier
-    if (token instanceof Construct) {
-      if (token.value === Construct.BRACKET_L) {
-        // (t, t)
-        // (t)
-        this.it.next(); // (
-        const t1 = this.getTerm();
-        // const c = 
-      }
-    } else if (token instanceof Keyword) {
-      if (token.value === Keyword.LET) term = this.termLet();
-      else if (token.value === Keyword.ASYNC) term = this.termAsyncFun();
-      else if (token.value === Keyword.FUNC) term = this.termFun();
-    }
-
-    // 次のtokenを見る // 再帰的にやる // (t1 t2) t3
-    // t1 t2 // 次spaceだったら関数適用 t2 = getTerm()で親termが関数適用
-    // .1? .2? // .1と.2が親term
-    // 左結合
-    const next = this.it.peek();
-    if (next instanceof Construct) {
-      if (next.value === Construct.PAIR_CAR) {
-        // .1
-        // term = new PairCar(term);
-        // continue
-      } else if (next.value === Construct.PAIR_CDR) {
-        // .2
-        // term = new PairCdr(term);
-        // continue
-      }
-      // return term;
-    }
-    // t t // 配列で返す？
-    // if (next instanceof Identifier || next instanceof Keyword) { // id, async, fun, let
-    //   // t t
-    //   // const t2 = this.getTerm();
-    //   // term = new Application(term, t2);
-    //   // continue
-    // }
-  }
-
-  getType_(level = 0) {
-    const token = this.it.next();
-    if (token instanceof Construct && token.value === Construct.BRACKET_L) return this.getType(level + 1);
-    if (token instanceof Identifier)
-    if (token instanceof Construct && token.value === Construct.BRACKET_R) return 
-
-  }
-
   getSingleTerm() {
     // console.log('getSingleTerm, peek:', this.it.peek());
     
@@ -92,6 +39,7 @@ class Parser {
         this.it.next(); // )
         term = new Pair(t1, t2);
       } else if (this.it.peek() === Construct.BRACKET_R) {
+        this.it.next(); // )
         term = t1;
       } else {
         throwSyntaxError(this.it.peek(), [Construct.COMMA, Construct.BRACKET_R]);
