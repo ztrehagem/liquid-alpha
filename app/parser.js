@@ -1,6 +1,6 @@
 const { inspect } = require('util');
-const Iterator = require('../util/iterator');
-const token = require('../lexer/token');
+const Iterator = require('./util/iterator');
+const token = require('./token');
 const term = require('./term');
 
 const {
@@ -191,6 +191,4 @@ class Parser {
 
 }
 
-module.exports = {
-  Parser,
-};
+module.exports = Parser;

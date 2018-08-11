@@ -1,5 +1,7 @@
 class Term {
-
+  constructor() {
+    this.type = null;
+  }
 }
 
 class Variable extends Term {
@@ -33,10 +35,10 @@ class Let extends Term {
 }
 
 class Fun extends Term {
-  constructor(arg, type, body, async = false) {
+  constructor(arg, argType, body, async = false) {
     super();
     this.arg = arg;
-    this.type = type;
+    this.argType = argType;
     this.body = body;
     this.async = async;
   }
