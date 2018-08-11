@@ -1,22 +1,26 @@
-const kinds = {
-  LITERAL: 'literal',
-  IDENTIFIER: 'identifier',
-  CONSTRUCT: 'construct',
-  KEYWORD: 'keyword',
-};
+const LITERAL = 'literal';
+const IDENTIFIER = 'identifier';
+const CONSTRUCT = 'construct';
+const KEYWORD = 'keyword';
 
 class Token {
-  constructor(kind, value) {
+  constructor(kind, str) {
     this.kind = kind;
-    this.value = value;
+    this.str = str;
+  }
+
+  toString() {
+    return this.str;
   }
 }
+Token.toString = () => "Token";
 
 class Keyword extends Token {
   constructor(str) {
-    super(kinds.KEYWORD, str);
+    super(KEYWORD, str);
   }
 }
+Keyword.toString = () => "Keyword";
 Keyword.kinds = {
   ASYNC: 'async',
   FUN: 'fun',
@@ -24,14 +28,15 @@ Keyword.kinds = {
   IN: 'in',
 };
 for (const [key, str] of Object.entries(Keyword.kinds)) {
-  Keyword[key] = str;
+  Keyword[key] = new Keyword(str);
 }
 
 class Construct extends Token {
   constructor(str) {
-    super(kinds.CONSTRUCT, str);
+    super(CONSTRUCT, str);
   }
 }
+Construct.toString = () => "Construct";
 Construct.kinds = {
   BRACKET_L: '(',
   BRACKET_R: ')',
@@ -42,20 +47,22 @@ Construct.kinds = {
   COLON: ':',
 };
 for (const [key, str] of Object.entries(Construct.kinds)) {
-  Construct[key] = str;
+  Construct[key] = new Construct(str);
 }
 
 class Identifier extends Token {
-  constructor(label) {
-    super(kinds.CONSTRUCT, label)
+  constructor(str) {
+    super(IDENTIFIER, str)
   }
 }
+Identifier.toString = () => "Identifier";
 
 class Literal extends Token {
-  constructor(value) {
-    super(kinds.LITERAL, value);
+  constructor(str) {
+    super(LITERAL, str);
   }
 }
+Literal.toString = () => "Literal";
 
 module.exports = {
   Token,
@@ -63,5 +70,4 @@ module.exports = {
   Construct,
   Identifier,
   Literal,
-  kinds,
 };

@@ -53,13 +53,12 @@ class Lexer {
   tryAsConstruct() {
     const match = this.code.substring(this.head).match(/^\.[12]|[^ \n]/);
     if (!match) return null;
-    const [ str ] = match;
+    const [ word ] = match;
     const { index } = match;
-    if (Object.values(Construct.kinds).includes(str)) {
-      this.head += index + str.length;
-      return new Construct(str);
-    }
-    return null;
+    const [ key ] = Object.entries(Construct.kinds).find(([ key, str ]) => str === word) || [];
+    if (!key) return null;
+    this.head += index + word.length;
+    return Construct[key];
   }
 
   getWord() {
@@ -72,19 +71,18 @@ class Lexer {
   }
 
   asKeyword(word) {
-    if (Object.values(Keyword.kinds).includes(word)) {
-      return new Keyword(word);
-    }
-    return null;
+    const [ key ] = Object.entries(Keyword.kinds).find(([ key, str ]) => str === word) || [];
+    if (!key) return null;
+    return Keyword[key];
   }
 
   asLiteral(word) {
     if (word === 'true' || word === 'false') {
-      // return new Literal(word === 'true');
+      // return new Literal(word === 'true'); // jsプリミティブに変換
       return new Literal(word);
     }
     if (word.match(/^\d+(?:\.\d+)?$/)) {
-      // return new Literal(parseFloat(word));
+      // return new Literal(parseFloat(word)); // jsプリミティブに変換
       return new Literal(word);
     }
     return null;
