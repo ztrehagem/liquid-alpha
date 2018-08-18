@@ -1,23 +1,8 @@
 const { inspect } = require('util');
 const Iterator = require('./util/iterator');
-const token = require('./token');
-const term = require('./term');
-
-const {
-  Variable,
-  Primitive,
-  Literal,
-  Let,
-  Fun,
-  AsyncFun,
-  Pair,
-  PairCar,
-  PairCdr,
-  Application,
-  Type,
-  FunType,
-  AsyncFunType,
-} = term;
+const tkn = require('./token');
+const trm = require('./term');
+const typ = require('./type');
 
 const deep = obj => inspect(obj, { depth: Infinity, colors: true });
 const log = (str, obj) => {
@@ -52,53 +37,55 @@ class Parser {
     log('getSingleTerm, peek:', this.it.peek());
     
     let term = null;
-    if (this.it.peek() === token.Construct.BRACKET_L) {
+    const peek = this.it.peek();
+    if (peek === tkn.Construct.BRACKET_L) {
       this.it.next(); // (
       const t1 = this.getTerm(); // t1
+      const peek = this.it.peek();
       
-      if (this.it.peek() === token.Construct.COMMA) {
+      if (peek === tkn.Construct.COMMA) {
         this.it.next(); // ,
         const t2 = this.getTerm(); // t2
-        assert(this.it.peek(), token.Construct.BRACKET_R);
+        assert(this.it.peek(), tkn.Construct.BRACKET_R);
         this.it.next(); // )
-        term = new Pair(t1, t2);
-      } else if (this.it.peek() === token.Construct.BRACKET_R) {
+        term = new trm.Pair(t1, t2);
+      } else if (peek === tkn.Construct.BRACKET_R) {
         this.it.next(); // )
         term = t1;
       } else {
-        throwSyntaxError(this.it.peek(), [token.Construct.COMMA, token.Construct.BRACKET_R]);
+        throwSyntaxError(peek, [tkn.Construct.COMMA, tkn.Construct.BRACKET_R]);
       }
-    } else if (this.it.peek() instanceof token.Keyword) {
-      if (this.it.peek() === token.Keyword.ASYNC) term = this.termAsyncFun();
-      else if (this.it.peek() === token.Keyword.FUN) term = this.termFun();
-      else if (this.it.peek() === token.Keyword.LET) term = this.termLet();
-      else throwSyntaxError(this.it.peek(), [token.Keyword.ASYNC, token.Keyword.FUN, token.Keyword.LET]);
-    } else if (this.it.peek() instanceof token.Identifier) {
+    } else if (peek instanceof tkn.Keyword) {
+      if (peek === tkn.Keyword.ASYNC) term = this.termAsyncFun();
+      else if (peek === tkn.Keyword.FUN) term = this.termFun();
+      else if (peek === tkn.Keyword.LET) term = this.termLet();
+      else throwSyntaxError(peek, [tkn.Keyword.ASYNC, tkn.Keyword.FUN, tkn.Keyword.LET]);
+    } else if (peek instanceof tkn.Identifier) {
       const identifier = this.it.next();
-      term = new Variable(identifier);
-    } else if (this.it.peek() instanceof token.Primitive) {
+      term = new trm.Variable(identifier);
+    } else if (peek instanceof tkn.Primitive) {
       const primitive = this.it.next();
-      term = new Primitive(primitive);
-    } else if (this.it.peek() instanceof token.Literal) {
+      term = trm.Primitive.fromToken(primitive);
+    } else if (peek instanceof tkn.Literal) {
       const literal = this.it.next();
-      term = new Literal(literal);
+      term = trm.Literal.fromToken(literal);
     } else {
-      throwSyntaxError(this.it.peek(), [token.Keyword, token.Identifier, token.Literal, token.Construct.BRACKET_L]);
+      throwSyntaxError(peek, [tkn.Keyword, tkn.Identifier, tkn.Literal, tkn.Construct.BRACKET_L]);
     }
-    if (this.it.peek() === token.Construct.PAIR_CAR) {
+    if (this.it.peek() === tkn.Construct.PAIR_CAR) {
       this.it.next(); // .1
-      term = new PairCar(term);
-    } else if (this.it.peek() === token.Construct.PAIR_CDR) {
+      term = new trm.PairCar(term);
+    } else if (this.it.peek() === tkn.Construct.PAIR_CDR) {
       this.it.next(); // .2
-      term = new PairCdr(term);
+      term = new trm.PairCdr(term);
     }
     return term;
   }
 
   hasNextArgTerm() {
     const peek = this.it.peek();
-    if (isInstance(peek, token.Identifier, token.Primitive, token.Literal)) return true;
-    if ([token.Construct.BRACKET_L, token.Keyword.ASYNC, token.Keyword.FUN, token.Keyword.LET].includes(peek)) return true;
+    if (isInstance(peek, tkn.Identifier, tkn.Primitive, tkn.Literal)) return true;
+    if ([tkn.Construct.BRACKET_L, tkn.Keyword.ASYNC, tkn.Keyword.FUN, tkn.Keyword.LET].includes(peek)) return true;
     return false;
   }
 
@@ -108,7 +95,7 @@ class Parser {
     let term = this.getSingleTerm();
     while(this.hasNextArgTerm()) {
       const t2 = this.getSingleTerm();
-      term = new Application(term, t2);
+      term = new trm.Application(term, t2);
     }
     log('term:', term);
     return term;
@@ -118,23 +105,36 @@ class Parser {
     log('getType, peek:', this.it.peek());
 
     let type = null;
-    if (this.it.peek() === token.Construct.BRACKET_L) {
+    if (this.it.peek() === tkn.Construct.BRACKET_L) {
       this.it.next(); // (
-      type = this.getType();
-      assert(this.it.peek(), token.Construct.BRACKET_R);
-      this.it.next(); // )
-    } else if (this.it.peek() instanceof token.Primitive) {
+      type = this.getType(); // T
+
+      if (this.it.peek() === tkn.Construct.COMMA) {
+        this.it.next(); // ,
+        const cdrType = this.getType(); // T
+        assert(this.it.peek(), tkn.Construct.BRACKET_R);
+        this.it.next(); // )
+        type = new typ.PairType(type, cdrType);
+      } else if (this.it.peek() === tkn.Construct.BRACKET_R) {
+        this.it.next(); // )
+      } else {
+        throwSyntaxError(this.it.peek(), [tkn.Construct.COMMA, tkn.Construct,BRACKET_R]);
+      }
+    } else if (this.it.peek() instanceof tkn.Primitive) {
+      const primitive = this.it.next(); // T
+      type = primitive.type;
+    } else if (this.it.peek() instanceof tkn.Identifier) {
       const identifier = this.it.next(); // T
-      type = new Type(identifier);
+      type = new typ.Type(identifier);
     }
-    if (this.it.peek() === token.Construct.ARROW) {
+    if (this.it.peek() === tkn.Construct.ARROW) {
       this.it.next(); // ->
-      const toType = this.getType();
-      type = new FunType(type, toType);
-    } else if (this.it.peek() === token.Construct.AARROW) {
+      const domain = this.getType();
+      type = new typ.FunType(type, domain);
+    } else if (this.it.peek() === tkn.Construct.AARROW) {
       this.it.next(); // ->a
-      const toType = this.getType();
-      type = new AsyncFunType(type, toType);
+      const domain = this.getType();
+      type = new typ.AsyncFunType(type, domain);
     }
     log('type: ', type);
     return type;
@@ -144,49 +144,49 @@ class Parser {
     log('termLet, peek:', this.it.peek());
 
     this.it.next(); // let
-    assertInstance(this.it.peek(), token.Identifier);
-    const id = new Variable(this.it.next()); // x
-    assert(this.it.peek(), token.Construct.EQUAL);
+    assertInstance(this.it.peek(), tkn.Identifier);
+    const id = new trm.Variable(this.it.next()); // x
+    assert(this.it.peek(), tkn.Construct.EQUAL);
     this.it.next(); // =
     const t1 = this.getTerm(); // t1
-    assert(this.it.peek(), token.Keyword.IN);
+    assert(this.it.peek(), tkn.Keyword.IN);
     this.it.next(); // in
     const t2 = this.getTerm(); // t2
-    return new Let(id, t1, t2);
+    return new trm.Let(id, t1, t2);
   }
 
   termAsyncFun() {
     log('termAsyncFun, peek:', this.it.peek());
 
     this.it.next(); // async
-    assert(this.it.peek(), token.Keyword.FUN);
+    assert(this.it.peek(), tkn.Keyword.FUN);
     this.it.next(); // fun
-    assertInstance(this.it.peek(), token.Identifier);
-    const arg = new Variable(this.it.next()); // x
-    assert(this.it.peek(), token.Construct.COLON);
+    assertInstance(this.it.peek(), tkn.Identifier);
+    const arg = new trm.Variable(this.it.next()); // x
+    assert(this.it.peek(), tkn.Construct.COLON);
     this.it.next(); // :
     const type = this.getType(); // T
     // assertion?
-    assert(this.it.peek(), token.Construct.EQUAL);
+    assert(this.it.peek(), tkn.Construct.EQUAL);
     this.it.next(); // =
     const body = this.getTerm(); // t
-    return new AsyncFun(arg, type, body);
+    return new trm.AsyncFun(arg, type, body);
   }
 
   termFun() {
     log('termFun, peek:', this.it.peek());
 
     this.it.next(); // fun
-    assertInstance(this.it.peek(), token.Identifier);
-    const arg = new Variable(this.it.next()); // x
-    assert(this.it.peek(), token.Construct.COLON);
+    assertInstance(this.it.peek(), tkn.Identifier);
+    const arg = new trm.Variable(this.it.next()); // x
+    assert(this.it.peek(), tkn.Construct.COLON);
     this.it.next(); // :
     const type = this.getType(); // T
     // assertion?
-    assert(this.it.peek(), token.Construct.EQUAL);
+    assert(this.it.peek(), tkn.Construct.EQUAL);
     this.it.next(); // =
     const body = this.getTerm(); // t
-    return new Fun(arg, type, body);
+    return new trm.Fun(arg, type, body);
   }
 
 }

@@ -1,6 +1,13 @@
+const tkn = require('./token');
+const typ = require('./type');
+
 class Term {
-  constructor() {
-    this.type = null;
+  constructor(type = null) {
+    this.type = type;
+  }
+
+  checkType(env = []) {
+    return this.type;
   }
 }
 
@@ -9,21 +16,54 @@ class Variable extends Term {
     super();
     this.label = label.toString();
   }
+
+  checkType(env = []) {
+    const [, type] = env.find(([label, env]) => label === this.label);
+    return this.type = type;
+  }
 }
 
 class Primitive extends Term {
-  constructor(str) {
-    super();
+  constructor(str, type) {
+    super(type);
     this.str = str.toString();
   }
+
+  checkType(env = []) {
+    return this.type;
+  }
+
+  static fromToken(token) {
+    switch (token) {
+      case tkn.Primitive.AND: return Primitive.AND;
+      case tkn.Primitive.NOT: return Primitive.NOT;
+      default: return null;
+    }
+  }
 }
+Primitive.AND = new Primitive(tkn.Primitive.AND, tkn.Primitive.AND.type);
+Primitive.NOT = new Primitive(tkn.Primitive.NOT, tkn.Primitive.NOT.type);
 
 class Literal extends Term {
-  constructor(str) {
-    super();
+  constructor(str, type) {
+    super(type);
     this.str = str.toString();
   }
+
+  checkType(env = []) {
+    return this.type;
+  }
+
+  static fromToken(token) {
+    switch (token) {
+      case tkn.Literal.TRUE: return Literal.TRUE;
+      case tkn.Literal.FALSE: return Literal.FALSE;
+      default: return new Literal(token, token.type);
+    }
+  }
 }
+Literal.TRUE = new Literal(tkn.Literal.TRUE, tkn.Literal.TRUE.type);
+Literal.FALSE = new Literal(tkn.Literal.FALSE, tkn.Literal.FALSE.type);
 
 class Let extends Term {
   constructor(arg, bound, body) {
@@ -32,21 +72,38 @@ class Let extends Term {
     this.bound = bound;
     this.body = body;
   }
+
+  checkType(env = []) {
+    const boundType = this.bound.checkType(env);
+    const newEnv = [this.arg.label, boundType];
+    return this.type = this.body.checkType([newEnv, ...env]);
+  }
 }
 
 class Fun extends Term {
-  constructor(arg, argType, body, async = false) {
+  constructor(arg, argType, body) {
     super();
     this.arg = arg;
     this.argType = argType;
     this.body = body;
-    this.async = async;
+  }
+
+  checkType(env = []) {
+    const newEnv = [this.arg.label, this.argType];
+    const bodyType = this.body.checkType([newEnv, ...env]);
+    return this.type = new typ.FunType(this.argType, bodyType);
   }
 }
 
 class AsyncFun extends Fun {
-  constructor(arg, type, body) {
-    super(arg, type, body, true);
+  constructor(arg, argType, body) {
+    super(arg, argType, body);
+  }
+
+  checkType(env = []) {
+    const newEnv = [this.arg.label, this.argType];
+    const bodyType = this.body.checkType([newEnv, ...env]);
+    return this.type = new typ.AsyncFunType(this.argType, bodyType);
   }
 }
 
@@ -56,12 +113,22 @@ class Pair extends Term {
     this.car = car;
     this.cdr = cdr;
   }
+
+  checkType(env = []) {
+    const carType = this.car.checkType(env);
+    const cdrType = this.cdr.checkType(env);
+    return this.type = new typ.PairType(carType, cdrType);
+  }  
 }
 
 class PairCar extends Term {
   constructor(pair) {
     super();
     this.pair = pair;
+  }
+
+  checkType(env = []) {
+    return this.type = this.pair.checkType(env).car;
   }
 }
 
@@ -70,40 +137,28 @@ class PairCdr extends Term {
     super();
     this.pair = pair;
   }
+
+  checkType(env = []) {
+    return this.type = this.pair.checkType(env).cdr;
+  }
 }
 
 class Application extends Term {
-  constructor(t1, t2) {
+  constructor(abs, arg) {
     super();
-    this.t1 = t1;
-    this.t2 = t2;
-  }
-}
-
-class Type extends Term {
-  constructor(str, fun = false) {
-    super();
-    this.str = str.toString();
-    this.fun = fun;
+    this.abs = abs;
+    this.arg = arg;
   }
 
-  toString() {
-    return this.str;
-  }
-}
-
-class FunType extends Type {
-  constructor(from, to, async = false) {
-    super(`${from.fun ? `(${from})` : from} ${async ? '->a' : '->' } ${to}`, true);
-    this.from = from;
-    this.to = to;
-    this.async = async;
-  }
-}
-
-class AsyncFunType extends Type {
-  constructor(from, to) {
-    super(from, to, true);
+  checkType(env = []) {
+    const absType = this.abs.checkType(env);
+    const argType = this.arg.checkType(env);
+    if (!(absType instanceof typ.FunType))
+      throw new Error(`type error: expected FunType but got "${absType}"`);
+    
+    if (!absType.def.equalTo(argType))
+      throw new Error(`type error: expected "${absType.def}" but got "${argType}"`);
+    return this.type = absType.dom;
   }
 }
 
@@ -119,7 +174,4 @@ module.exports = {
   PairCar,
   PairCdr,
   Application,
-  Type,
-  FunType,
-  AsyncFunType,
 };

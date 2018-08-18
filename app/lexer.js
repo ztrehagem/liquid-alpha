@@ -1,4 +1,5 @@
 const { Keyword, Construct, Identifier, Primitive, Literal } = require('./token');
+const wrd = require('./word');
 
 class Lexer {
   constructor(code) {
@@ -58,8 +59,6 @@ class Lexer {
   }
 
   tryAsConstruct() {
-    // console.log('tryAsConstruct', this.code.substring(this.head, this.head + 10));
-    
     const match = this.code.substring(this.head).match(/^\.[12]|\S/);
     if (!match) return null;
     let [ word ] = match;
@@ -81,28 +80,34 @@ class Lexer {
   }
 
   asKeyword(word) {
-    const [ key ] = Object.entries(Keyword.kinds).find(([ key, str ]) => str === word) || [];
-    if (!key) return null;
-    return Keyword[key];
+    switch (word) {
+      case wrd.ASYNC: return Keyword.ASYNC;
+      case wrd.FUN: return Keyword.FUN;
+      case wrd.LET: return Keyword.LET;
+      case wrd.IN: return Keyword.IN;
+      default: return null;
+    }
   }
 
   asLiteral(word) {
-    if ('true false'.split(' ').includes(word)) { // Bool
-      // return new Literal(word === 'true'); // jsプリミティブに変換
-      return new Literal(word);
+    switch (word) {
+      case wrd.TRUE: return Literal.TRUE;
+      case wrd.FALSE: return Literal.FALSE;
     }
     if (word.match(/^\d+(?:\.\d+)?$/)) { // Number
-      // return new Literal(parseFloat(word)); // jsプリミティブに変換
-      return new Literal(word);
+      return Literal.asNumber(word);
     }
     return null;
   }
 
   asPrimitive(word) {
-    if ('and not Bool'.split(' ').includes(word)) {
-      return new Primitive(word);
+    switch (word) {
+      case wrd.AND: return Primitive.AND;
+      case wrd.NOT: return Primitive.NOT;
+      case wrd.BOOL: return Primitive.BOOL;
+      case wrd.NUMBER: return Primitive.NUMBER;
+      default: return null;
     }
-    return null;
   }
 
   asIdentifier(word) {

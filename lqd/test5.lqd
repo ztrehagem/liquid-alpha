@@ -1,0 +1,10 @@
+let g =
+  fun x: Bool ->a Bool =
+    x false
+in
+  let f = 
+    fun z: (Bool, Bool) =
+      async fun y: Bool =
+        and (z.1, y)
+  in
+    g (f (true, false))
