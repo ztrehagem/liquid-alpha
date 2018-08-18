@@ -1,5 +1,6 @@
-const { Keyword, Construct, Identifier, Primitive, Literal } = require('./token');
+const tkn = require('./token');
 const wrd = require('./word');
+const typ = require('./type');
 
 class Lexer {
   constructor(code) {
@@ -16,7 +17,7 @@ class Lexer {
       }
 
       // 演算子とか
-      const construct = this.tryAsConstruct();
+      const construct = this.asConstruct();
       if (construct) {
         this.tokens.push(construct);
         continue;
@@ -25,30 +26,20 @@ class Lexer {
       const word = this.getWord();
 
       // 予約語
-      const keyword = this.asKeyword(word);
-      if (keyword) {
-        this.tokens.push(keyword);
-        continue;
-      }
-
-      // プリミティブ
-      const primitive = this.asPrimitive(word);
-      if (primitive) {
-        this.tokens.push(primitive);
+      // プリミティブ関数
+      // プリミティブ型
+      // リテラル（Bool）
+      const fixedWord = this.asFixedWord(word);
+      if (fixedWord) {
+        this.tokens.push(fixedWord);
         continue;
       }
 
       // リテラル
-      const literal = this.asLiteral(word);
-      if (literal) {
-        this.tokens.push(literal);
-        continue;
-      }
-
-      // 識別子（変数とか）
-      const identifier = this.asIdentifier(word);
-      if (identifier) {
-        this.tokens.push(identifier);
+      // 識別子（変数）
+      const mutableWord = this.asMutableWord(word);
+      if (mutableWord) {
+        this.tokens.push(mutableWord);
         continue;
       }
 
@@ -58,16 +49,16 @@ class Lexer {
     return this.tokens;
   }
 
-  tryAsConstruct() {
+  asConstruct() {
     const match = this.code.substring(this.head).match(/^\.[12]|\S/);
     if (!match) return null;
     let [ word ] = match;
     const { index } = match;
     if (word === '-') [ word ] = this.code.substring(this.head + index).match(/^->a?/);
-    const [ key ] = Object.entries(Construct.kinds).find(([ key, str ]) => str === word) || [];
+    const [ key ] = Object.entries(tkn.Construct.kinds).find(([ key, str ]) => str === word) || [];
     if (!key) return null;
     this.head += index + word.length;
-    return Construct[key];
+    return tkn.Construct[key];
   }
 
   getWord() {
@@ -79,41 +70,28 @@ class Lexer {
     return word;
   }
 
-  asKeyword(word) {
+  asFixedWord(word) {
     switch (word) {
-      case wrd.ASYNC: return Keyword.ASYNC;
-      case wrd.FUN: return Keyword.FUN;
-      case wrd.LET: return Keyword.LET;
-      case wrd.IN: return Keyword.IN;
+      case wrd.ASYNC: return tkn.Keyword.ASYNC;
+      case wrd.FUN: return tkn.Keyword.FUN;
+      case wrd.LET: return tkn.Keyword.LET;
+      case wrd.IN: return tkn.Keyword.IN;
+      case wrd.AND: return tkn.PrimitiveFun.AND;
+      case wrd.NOT: return tkn.PrimitiveFun.NOT;
+      case wrd.BOOL: return tkn.PrimitiveType.BOOL;
+      case wrd.NUMBER: return tkn.PrimitiveType.NUMBER;
+      case wrd.TRUE: return tkn.Literal.TRUE;
+      case wrd.FALSE: return tkn.Literal.FALSE;
       default: return null;
     }
   }
 
-  asLiteral(word) {
-    switch (word) {
-      case wrd.TRUE: return Literal.TRUE;
-      case wrd.FALSE: return Literal.FALSE;
-    }
-    if (word.match(/^\d+(?:\.\d+)?$/)) { // Number
-      return Literal.asNumber(word);
-    }
-    return null;
-  }
-
-  asPrimitive(word) {
-    switch (word) {
-      case wrd.AND: return Primitive.AND;
-      case wrd.NOT: return Primitive.NOT;
-      case wrd.BOOL: return Primitive.BOOL;
-      case wrd.NUMBER: return Primitive.NUMBER;
-      default: return null;
-    }
-  }
-
-  asIdentifier(word) {
-    if (word.match(/^[A-Za-z_]\w*$/)) {
-      return new Identifier(word);
-    }
+  asMutableWord(word) {
+    if (word.match(/^\d+(?:\.\d+)?$/)) // Number
+      return new tkn.Literal(word, typ.NUMBER);
+    if (word.match(/^[A-Za-z_]\w*$/)) // Identifier
+      return new tkn.Identifier(word);
+      
     return null;
   }
 }

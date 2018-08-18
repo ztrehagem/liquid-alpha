@@ -3,7 +3,8 @@ const typ = require('./type');
 
 const kinds = {
   LITERAL: 'literal',
-  PRIMITIVE: 'primitive',
+  PRIMITIVE_FUN: 'primitive_fun',
+  PRIMITIVE_TYPE: 'primitive_type',
   IDENTIFIER: 'identifier',
   CONSTRUCT: 'construct',
   KEYWORD: 'keyword',
@@ -83,30 +84,33 @@ class Identifier extends Token {
   }
 }
 
-// TODO PrimitiveFun
-// TODO PrimitiveType
-// TODO and, or -> Construct
-class Primitive extends TypedToken {
+class PrimitiveFun extends TypedToken {
   constructor(str, type) {
-    super(kinds.PRIMITIVE, str, type);
+    super(kinds.PRIMITIVE_FUN, str, type);
   }
 
   static toString() {
-    return 'Primitive';
+    return 'PrimitiveFun';
   }
 }
-Primitive.AND = new Primitive(wrd.AND, new typ.FunType(new typ.PairType(typ.BOOL, typ.BOOL), typ.BOOL));
-Primitive.NOT = new Primitive(wrd.NOT, new typ.FunType(typ.BOOL, typ.BOOL));
-Primitive.BOOL = new Primitive(wrd.BOOL, typ.BOOL);
-Primitive.NUMBER = new Primitive(wrd.NUMBER, typ.NUMBER);
+PrimitiveFun.AND = new PrimitiveFun(wrd.AND, new typ.FunType(new typ.PairType(typ.BOOL, typ.BOOL), typ.BOOL));
+PrimitiveFun.NOT = new PrimitiveFun(wrd.NOT, new typ.FunType(typ.BOOL, typ.BOOL));
+
+class PrimitiveType extends TypedToken {
+  constructor(str, type) {
+    super(kinds.PRIMITIVE_TYPE, str, type);
+  }
+
+  static toString() {
+    return 'PrimitiveType';
+  }
+}
+PrimitiveType.BOOL = new PrimitiveType(wrd.BOOL, typ.BOOL);
+PrimitiveType.NUMBER = new PrimitiveType(wrd.NUMBER, typ.NUMBER);
 
 class Literal extends TypedToken {
   constructor(str, type) {
     super(kinds.LITERAL, str, type);
-  }
-
-  static asNumber(str) {
-    return new Literal(str, typ.NUMBER);
   }
 
   static toString() {
@@ -121,6 +125,7 @@ module.exports = {
   Keyword,
   Construct,
   Identifier,
-  Primitive,
+  PrimitiveFun,
+  PrimitiveType,
   Literal,
 };

@@ -35,14 +35,14 @@ class Primitive extends Term {
 
   static fromToken(token) {
     switch (token) {
-      case tkn.Primitive.AND: return Primitive.AND;
-      case tkn.Primitive.NOT: return Primitive.NOT;
+      case tkn.PrimitiveFun.AND: return Primitive.AND;
+      case tkn.PrimitiveFun.NOT: return Primitive.NOT;
       default: return null;
     }
   }
 }
-Primitive.AND = new Primitive(tkn.Primitive.AND, tkn.Primitive.AND.type);
-Primitive.NOT = new Primitive(tkn.Primitive.NOT, tkn.Primitive.NOT.type);
+Primitive.AND = new Primitive(tkn.PrimitiveFun.AND, tkn.PrimitiveFun.AND.type);
+Primitive.NOT = new Primitive(tkn.PrimitiveFun.NOT, tkn.PrimitiveFun.NOT.type);
 
 class Literal extends Term {
   constructor(str, type) {

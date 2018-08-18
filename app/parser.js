@@ -63,14 +63,14 @@ class Parser {
     } else if (peek instanceof tkn.Identifier) {
       const identifier = this.it.next();
       term = new trm.Variable(identifier);
-    } else if (peek instanceof tkn.Primitive) {
-      const primitive = this.it.next();
-      term = trm.Primitive.fromToken(primitive);
+    } else if (peek instanceof tkn.PrimitiveFun) {
+      const primitiveFun = this.it.next();
+      term = trm.Primitive.fromToken(primitiveFun);
     } else if (peek instanceof tkn.Literal) {
       const literal = this.it.next();
       term = trm.Literal.fromToken(literal);
     } else {
-      throwSyntaxError(peek, [tkn.Keyword, tkn.Identifier, tkn.Literal, tkn.Construct.BRACKET_L]);
+      throwSyntaxError(peek, [tkn.Keyword, tkn.Identifier, tkn.PrimitiveFun, tkn.Literal, tkn.Construct.BRACKET_L]);
     }
     if (this.it.peek() === tkn.Construct.PAIR_CAR) {
       this.it.next(); // .1
@@ -84,7 +84,7 @@ class Parser {
 
   hasNextArgTerm() {
     const peek = this.it.peek();
-    if (isInstance(peek, tkn.Identifier, tkn.Primitive, tkn.Literal)) return true;
+    if (isInstance(peek, tkn.Identifier, tkn.PrimitiveFun, tkn.Literal)) return true;
     if ([tkn.Construct.BRACKET_L, tkn.Keyword.ASYNC, tkn.Keyword.FUN, tkn.Keyword.LET].includes(peek)) return true;
     return false;
   }
@@ -120,7 +120,7 @@ class Parser {
       } else {
         throwSyntaxError(this.it.peek(), [tkn.Construct.COMMA, tkn.Construct,BRACKET_R]);
       }
-    } else if (this.it.peek() instanceof tkn.Primitive) {
+    } else if (this.it.peek() instanceof tkn.PrimitiveType) {
       const primitive = this.it.next(); // T
       type = primitive.type;
     } else if (this.it.peek() instanceof tkn.Identifier) {
