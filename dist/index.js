@@ -1,0 +1,21 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const util_1 = require("util");
+const lexer_1 = require("./app/lexer");
+const parser_1 = require("./app/parser");
+exports.exec = (lqd) => {
+    console.log('-------- program --------');
+    console.log(lqd);
+    console.log('-------- tokenize --------');
+    const tokens = new lexer_1.default(lqd).tokenize();
+    console.log(tokens);
+    console.log('-------- parse --------');
+    const ast = new parser_1.default(tokens).parse();
+    console.log(util_1.inspect(ast, { depth: Infinity, colors: true }));
+    console.log('-------- typing --------');
+    ast.checkType();
+    console.log(util_1.inspect(ast, { depth: Infinity, colors: true }));
+    console.log('-------- compiling --------');
+    const compiled = ast.compile();
+    console.log(util_1.inspect(compiled, { depth: Infinity, colors: true }));
+};

@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ASYNC = 'async';
+exports.FUN = 'fun';
+exports.LET = 'let';
+exports.IN = 'in';
+exports.AND = 'and';
+exports.NOT = 'not';
+exports.BOOL = 'Bool';
+exports.NUMBER = 'Number';
+exports.TRUE = 'true';
+exports.FALSE = 'false';

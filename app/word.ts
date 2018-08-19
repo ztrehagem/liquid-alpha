@@ -1,0 +1,10 @@
+export const ASYNC = 'async';
+export const FUN = 'fun';
+export const LET = 'let';
+export const IN = 'in';
+export const AND = 'and';
+export const NOT = 'not';
+export const BOOL = 'Bool';
+export const NUMBER = 'Number';
+export const TRUE = 'true';
+export const FALSE = 'false';
