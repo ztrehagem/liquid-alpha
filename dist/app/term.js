@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const typ = require("./type");
 const wrd = require("./word");
+const clt = require("./clterm");
 const type_rule_1 = require("./type-rule");
 class Term {
     constructor(type = null) {
@@ -11,18 +12,21 @@ class Term {
         return this.type;
     }
     compile() {
-        return this;
+        return new clt.Term();
     }
 }
 exports.Term = Term;
 class Variable extends Term {
     constructor(label) {
         super();
-        this.label = label.toString();
+        this.label = label;
     }
     checkType(env = []) {
         const { type } = env.find(({ label, type }) => label === this.label);
         return this.type = type;
+    }
+    compile() {
+        return new clt.Variable(this.label);
     }
 }
 exports.Variable = Variable;
@@ -33,6 +37,13 @@ class Primitive extends Term {
     }
     checkType(env = []) {
         return this.type;
+    }
+    compile() {
+        switch (this) {
+            case Primitive.AND: return clt.Primitive.AND;
+            case Primitive.NOT: return clt.Primitive.NOT;
+            default: return null;
+        }
     }
 }
 Primitive.AND = new Primitive(wrd.AND, new typ.FunType(new typ.PairType(typ.BOOL, typ.BOOL), typ.BOOL));
@@ -45,6 +56,16 @@ class Literal extends Term {
     }
     checkType(env = []) {
         return this.type;
+    }
+    compile() {
+        switch (this) {
+            case Literal.TRUE: return clt.Literal.TRUE;
+            case Literal.FALSE: return clt.Literal.FALSE;
+        }
+        if (this.type === typ.NUMBER) {
+            return new clt.Literal(parseFloat(this.str));
+        }
+        return null;
     }
 }
 Literal.TRUE = new Literal(wrd.TRUE, typ.BOOL);
@@ -62,6 +83,10 @@ class Let extends Term {
         const newEnv = new type_rule_1.default(this.arg.label, boundType);
         return this.type = this.body.checkType([newEnv, ...env]);
     }
+    compile() {
+        const abs = new clt.Lambda(this.arg.compile(), this.body.compile());
+        return new clt.Application(abs, this.bound.compile());
+    }
 }
 exports.Let = Let;
 class Fun extends Term {
@@ -75,6 +100,9 @@ class Fun extends Term {
         const newEnv = new type_rule_1.default(this.arg.label, this.argType);
         const bodyType = this.body.checkType([newEnv, ...env]);
         return this.type = new typ.FunType(this.argType, bodyType);
+    }
+    compile() {
+        return new clt.Lambda(this.arg.compile(), this.body.compile());
     }
 }
 exports.Fun = Fun;
@@ -100,6 +128,9 @@ class Pair extends Term {
         const cdrType = this.cdr.checkType(env);
         return this.type = new typ.PairType(carType, cdrType);
     }
+    compile() {
+        return new clt.Pair(this.car.compile(), this.cdr.compile());
+    }
 }
 exports.Pair = Pair;
 class PairCar extends Term {
@@ -113,6 +144,9 @@ class PairCar extends Term {
             throw new Error(`type error: expected PairType but got "${pairType}"`);
         return this.type = pairType.car;
     }
+    compile() {
+        return new clt.PairCar(this.pair.compile());
+    }
 }
 exports.PairCar = PairCar;
 class PairCdr extends Term {
@@ -125,6 +159,9 @@ class PairCdr extends Term {
         if (!(pairType instanceof typ.PairType))
             throw new Error(`type error: expected PairType but got "${pairType}"`);
         return this.type = pairType.cdr;
+    }
+    compile() {
+        return new clt.PairCdr(this.pair.compile());
     }
 }
 exports.PairCdr = PairCdr;
@@ -142,6 +179,10 @@ class Application extends Term {
         if (!absType.def.equalTo(argType))
             throw new Error(`type error: expected "${absType.def}" but got "${argType}"`);
         return this.type = absType.dom;
+    }
+    compile() {
+        const app = new clt.Application(this.abs.compile(), this.arg.compile());
+        return (this.abs.type instanceof typ.AsyncFunType) ? new clt.Future(app) : app;
     }
 }
 exports.Application = Application;
