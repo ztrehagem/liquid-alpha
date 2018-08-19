@@ -2,7 +2,6 @@ const { inspect } = require('util');
 const escodegen = require('escodegen');
 const Lexer = require('./app/lexer');
 const Parser = require('./app/parser');
-const Compiler = require('./app/compiler');
 
 exports.exec = (lqd) => {
   console.log('-------- program --------');
@@ -17,7 +16,7 @@ exports.exec = (lqd) => {
   ast.checkType();
   console.log(inspect(ast, { depth: Infinity, colors: true }));
   console.log('-------- compiling --------');
-  const compiled = new Compiler(ast).compile();
+  const compiled = ast.compile();
   console.log(inspect(compiled, { depth: Infinity, colors: true }));
 
   // console.log('-------- generate --------');

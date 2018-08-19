@@ -1,5 +1,6 @@
 const wrd = require('./word');
 const typ = require('./type');
+const trm = require('./term');
 
 const kinds = {
   LITERAL: 'literal',
@@ -85,16 +86,21 @@ class Identifier extends Token {
 }
 
 class PrimitiveFun extends TypedToken {
-  constructor(str, type) {
-    super(kinds.PRIMITIVE_FUN, str, type);
+  constructor(term) {
+    super(kinds.PRIMITIVE_FUN, term.str, term.type);
+    this.term = term;
+  }
+
+  toTerm() {
+    return this.term;
   }
 
   static toString() {
     return 'PrimitiveFun';
   }
 }
-PrimitiveFun.AND = new PrimitiveFun(wrd.AND, new typ.FunType(new typ.PairType(typ.BOOL, typ.BOOL), typ.BOOL));
-PrimitiveFun.NOT = new PrimitiveFun(wrd.NOT, new typ.FunType(typ.BOOL, typ.BOOL));
+PrimitiveFun.AND = new PrimitiveFun(trm.Primitive.AND);
+PrimitiveFun.NOT = new PrimitiveFun(trm.Primitive.NOT);
 
 class PrimitiveType extends TypedToken {
   constructor(str, type) {
@@ -113,12 +119,23 @@ class Literal extends TypedToken {
     super(kinds.LITERAL, str, type);
   }
 
+  toTerm() {
+    switch (this) {
+      case Literal.TRUE: return trm.Literal.TRUE;
+      case Literal.FALSE: return trm.Literal.FALSE;
+    }
+    if (this.type === typ.NUMBER) {
+      return new trm.Literal(this.str, this.type);
+    }
+    return null;
+  }
+
   static toString() {
     return 'Literal';
   }
 }
-Literal.TRUE = new Literal(wrd.TRUE, typ.BOOL);
-Literal.FALSE = new Literal(wrd.FALSE, typ.BOOL);
+Literal.TRUE = new Literal(trm.Literal.TRUE.str, trm.Literal.TRUE.type);
+Literal.FALSE = new Literal(trm.Literal.FALSE.str, trm.Literal.FALSE.type);
 
 module.exports = {
   Token,

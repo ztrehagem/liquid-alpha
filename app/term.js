@@ -1,5 +1,5 @@
-const tkn = require('./token');
 const typ = require('./type');
+const wrd = require('./word');
 
 class Term {
   constructor(type = null) {
@@ -8,6 +8,10 @@ class Term {
 
   checkType(env = []) {
     return this.type;
+  }
+
+  compile() {
+    return this;
   }
 }
 
@@ -32,17 +36,9 @@ class Primitive extends Term {
   checkType(env = []) {
     return this.type;
   }
-
-  static fromToken(token) {
-    switch (token) {
-      case tkn.PrimitiveFun.AND: return Primitive.AND;
-      case tkn.PrimitiveFun.NOT: return Primitive.NOT;
-      default: return null;
-    }
-  }
 }
-Primitive.AND = new Primitive(tkn.PrimitiveFun.AND, tkn.PrimitiveFun.AND.type);
-Primitive.NOT = new Primitive(tkn.PrimitiveFun.NOT, tkn.PrimitiveFun.NOT.type);
+Primitive.AND = new Primitive(wrd.AND, new typ.FunType(new typ.PairType(typ.BOOL, typ.BOOL), typ.BOOL));
+Primitive.NOT = new Primitive(wrd.NOT, new typ.FunType(typ.BOOL, typ.BOOL));
 
 class Literal extends Term {
   constructor(str, type) {
@@ -53,17 +49,9 @@ class Literal extends Term {
   checkType(env = []) {
     return this.type;
   }
-
-  static fromToken(token) {
-    switch (token) {
-      case tkn.Literal.TRUE: return Literal.TRUE;
-      case tkn.Literal.FALSE: return Literal.FALSE;
-      default: return new Literal(token, token.type);
-    }
-  }
 }
-Literal.TRUE = new Literal(tkn.Literal.TRUE, tkn.Literal.TRUE.type);
-Literal.FALSE = new Literal(tkn.Literal.FALSE, tkn.Literal.FALSE.type);
+Literal.TRUE = new Literal(wrd.TRUE, typ.BOOL);
+Literal.FALSE = new Literal(wrd.FALSE, typ.BOOL);
 
 class Let extends Term {
   constructor(arg, bound, body) {

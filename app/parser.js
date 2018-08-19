@@ -65,10 +65,10 @@ class Parser {
       term = new trm.Variable(identifier);
     } else if (peek instanceof tkn.PrimitiveFun) {
       const primitiveFun = this.it.next();
-      term = trm.Primitive.fromToken(primitiveFun);
+      term = primitiveFun.toTerm();
     } else if (peek instanceof tkn.Literal) {
       const literal = this.it.next();
-      term = trm.Literal.fromToken(literal);
+      term = literal.toTerm();
     } else {
       throwSyntaxError(peek, [tkn.Keyword, tkn.Identifier, tkn.PrimitiveFun, tkn.Literal, tkn.Construct.BRACKET_L]);
     }

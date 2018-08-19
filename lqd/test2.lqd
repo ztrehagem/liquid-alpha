@@ -1,4 +1,4 @@
 let myFun =
-  async fun a: T = not a.1
+  async fun a: (Bool, Number) = not a.1
 in
   myFun (true, 100)
