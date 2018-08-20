@@ -168,8 +168,8 @@ export class PrimitiveType extends TypedToken {
 }
 
 export class Literal extends TypedToken {
-  static TRUE: Literal = new Literal(trm.Literal.TRUE.str, trm.Literal.TRUE.type);
-  static FALSE: Literal = new Literal(trm.Literal.FALSE.str, trm.Literal.FALSE.type);
+  static TRUE: Literal = new Literal(trm.Value.TRUE.str, trm.Value.TRUE.type);
+  static FALSE: Literal = new Literal(trm.Value.FALSE.str, trm.Value.FALSE.type);
 
   constructor(str: string, type: typ.Type) {
     super(Kind.LITERAL, str, type);
@@ -177,11 +177,11 @@ export class Literal extends TypedToken {
 
   toTerm() {
     switch (this) {
-      case Literal.TRUE: return trm.Literal.TRUE;
-      case Literal.FALSE: return trm.Literal.FALSE;
+      case Literal.TRUE: return trm.Value.TRUE;
+      case Literal.FALSE: return trm.Value.FALSE;
     }
     if (this.type === typ.NUMBER) {
-      return new trm.Literal(this.str, this.type);
+      return new trm.Value(this.str, this.type);
     }
     return null;
   }

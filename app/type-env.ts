@@ -1,6 +1,6 @@
 import { Type } from './type';
 
-export default class TypeRule {
+export default class TypeEnv {
   label: string;
   type: Type;
 

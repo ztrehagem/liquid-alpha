@@ -151,11 +151,11 @@ class Literal extends TypedToken {
     }
     toTerm() {
         switch (this) {
-            case Literal.TRUE: return trm.Literal.TRUE;
-            case Literal.FALSE: return trm.Literal.FALSE;
+            case Literal.TRUE: return trm.Value.TRUE;
+            case Literal.FALSE: return trm.Value.FALSE;
         }
         if (this.type === typ.NUMBER) {
-            return new trm.Literal(this.str, this.type);
+            return new trm.Value(this.str, this.type);
         }
         return null;
     }
@@ -173,6 +173,6 @@ class Literal extends TypedToken {
         return this.name;
     }
 }
-Literal.TRUE = new Literal(trm.Literal.TRUE.str, trm.Literal.TRUE.type);
-Literal.FALSE = new Literal(trm.Literal.FALSE.str, trm.Literal.FALSE.type);
+Literal.TRUE = new Literal(trm.Value.TRUE.str, trm.Value.TRUE.type);
+Literal.FALSE = new Literal(trm.Value.FALSE.str, trm.Value.FALSE.type);
 exports.Literal = Literal;

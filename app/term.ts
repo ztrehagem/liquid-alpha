@@ -1,7 +1,7 @@
 import * as typ from './type';
 import * as wrd from './word';
 import * as clt from './clterm';
-import TypeRule from './type-rule';
+import TypeEnv from './type-env';
 
 export class Term {
   type: typ.Type;
@@ -10,7 +10,7 @@ export class Term {
     this.type = type;
   }
 
-  checkType(env: TypeRule[] = []) {
+  checkType(env: TypeEnv[] = []) {
     return this.type;
   }
 
@@ -27,7 +27,7 @@ export class Variable extends Term {
     this.label = label;
   }
 
-  checkType(env: TypeRule[] = []) {
+  checkType(env: TypeEnv[] = []) {
     const { type } = env.find(({ label, type }) => label === this.label);
     return this.type = type;
   }
@@ -48,7 +48,7 @@ export class Primitive extends Term {
     this.str = str;
   }
 
-  checkType(env: TypeRule[] = []) {
+  checkType(env: TypeEnv[] = []) {
     return this.type;
   }
 
@@ -61,9 +61,9 @@ export class Primitive extends Term {
   }
 }
 
-export class Literal extends Term {
-  static TRUE = new Literal(wrd.TRUE, typ.BOOL);
-  static FALSE = new Literal(wrd.FALSE, typ.BOOL);
+export class Value extends Term {
+  static TRUE = new Value(wrd.TRUE, typ.BOOL);
+  static FALSE = new Value(wrd.FALSE, typ.BOOL);
 
   str: string;
 
@@ -72,17 +72,17 @@ export class Literal extends Term {
     this.str = str;
   }
 
-  checkType(env: TypeRule[] = []) {
+  checkType(env: TypeEnv[] = []) {
     return this.type;
   }
 
   compile() {
     switch (this) {
-      case Literal.TRUE: return clt.Literal.TRUE;
-      case Literal.FALSE: return clt.Literal.FALSE;
+      case Value.TRUE: return clt.Value.TRUE;
+      case Value.FALSE: return clt.Value.FALSE;
     }
     if (this.type === typ.NUMBER) {
-      return new clt.Literal(parseFloat(this.str));
+      return new clt.Value(parseFloat(this.str));
     }
     return null;
   }
@@ -100,9 +100,9 @@ export class Let extends Term {
     this.body = body;
   }
 
-  checkType(env: TypeRule[] = []) {
+  checkType(env: TypeEnv[] = []) {
     const boundType = this.bound.checkType(env);
-    const newEnv = new TypeRule(this.arg.label, boundType);
+    const newEnv = new TypeEnv(this.arg.label, boundType);
     return this.type = this.body.checkType([newEnv, ...env]);
   }
 
@@ -124,8 +124,8 @@ export class Fun extends Term {
     this.body = body;
   }
 
-  checkType(env: TypeRule[] = []) {
-    const newEnv = new TypeRule(this.arg.label, this.argType);
+  checkType(env: TypeEnv[] = []) {
+    const newEnv = new TypeEnv(this.arg.label, this.argType);
     const bodyType = this.body.checkType([newEnv, ...env]);
     return this.type = new typ.FunType(this.argType, bodyType);
   }
@@ -140,8 +140,8 @@ export class AsyncFun extends Fun {
     super(arg, argType, body);
   }
 
-  checkType(env: TypeRule[] = []) {
-    const newEnv = new TypeRule(this.arg.label, this.argType);
+  checkType(env: TypeEnv[] = []) {
+    const newEnv = new TypeEnv(this.arg.label, this.argType);
     const bodyType = this.body.checkType([newEnv, ...env]);
     return this.type = new typ.AsyncFunType(this.argType, bodyType);
   }
@@ -157,7 +157,7 @@ export class Pair extends Term {
     this.cdr = cdr;
   }
 
-  checkType(env: TypeRule[] = []) {
+  checkType(env: TypeEnv[] = []) {
     const carType = this.car.checkType(env);
     const cdrType = this.cdr.checkType(env);
     return this.type = new typ.PairType(carType, cdrType);
@@ -176,7 +176,7 @@ export class PairCar extends Term {
     this.pair = pair;
   }
 
-  checkType(env: TypeRule[] = []) {
+  checkType(env: TypeEnv[] = []) {
     const pairType = this.pair.checkType(env);
     if (!(pairType instanceof typ.PairType))
       throw new Error(`type error: expected PairType but got "${pairType}"`);
@@ -196,7 +196,7 @@ export class PairCdr extends Term {
     this.pair = pair;
   }
 
-  checkType(env: TypeRule[] = []) {
+  checkType(env: TypeEnv[] = []) {
     const pairType = this.pair.checkType(env);
     if (!(pairType instanceof typ.PairType))
       throw new Error(`type error: expected PairType but got "${pairType}"`);
@@ -218,7 +218,7 @@ export class Application extends Term {
     this.arg = arg;
   }
 
-  checkType(env: TypeRule[] = []) {
+  checkType(env: TypeEnv[] = []) {
     const absType = this.abs.checkType(env);
     const argType = this.arg.checkType(env);
     if (!(absType instanceof typ.FunType))

@@ -4,7 +4,7 @@ const util_1 = require("util");
 const lexer_1 = require("./app/lexer");
 const parser_1 = require("./app/parser");
 exports.exec = (lqd) => {
-    console.log('-------- program --------');
+    console.log('-------- Liquid --------');
     console.log(lqd);
     console.log('-------- tokenize --------');
     const tokens = new lexer_1.default(lqd).tokenize();
@@ -12,10 +12,16 @@ exports.exec = (lqd) => {
     console.log('-------- parse --------');
     const ast = new parser_1.default(tokens).parse();
     console.log(util_1.inspect(ast, { depth: Infinity, colors: true }));
-    console.log('-------- typing --------');
+    console.log('-------- type check --------');
     ast.checkType();
     console.log(util_1.inspect(ast, { depth: Infinity, colors: true }));
-    console.log('-------- compiling --------');
+    console.log('-------- compile --------');
     const compiled = ast.compile();
     console.log(util_1.inspect(compiled, { depth: Infinity, colors: true }));
+    console.log('-------- core Liquid --------');
+    console.log(compiled.toString());
+    console.log('-------- evaluate --------');
+    const evaluated = compiled.evaluate();
+    console.log('-------- result --------');
+    console.log(evaluated.toString());
 };

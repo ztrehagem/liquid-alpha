@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const typ = require("./type");
 const wrd = require("./word");
 const clt = require("./clterm");
-const type_rule_1 = require("./type-rule");
+const type_env_1 = require("./type-env");
 class Term {
     constructor(type = null) {
         this.type = type;
@@ -49,7 +49,7 @@ class Primitive extends Term {
 Primitive.AND = new Primitive(wrd.AND, new typ.FunType(new typ.PairType(typ.BOOL, typ.BOOL), typ.BOOL));
 Primitive.NOT = new Primitive(wrd.NOT, new typ.FunType(typ.BOOL, typ.BOOL));
 exports.Primitive = Primitive;
-class Literal extends Term {
+class Value extends Term {
     constructor(str, type) {
         super(type);
         this.str = str;
@@ -59,18 +59,18 @@ class Literal extends Term {
     }
     compile() {
         switch (this) {
-            case Literal.TRUE: return clt.Literal.TRUE;
-            case Literal.FALSE: return clt.Literal.FALSE;
+            case Value.TRUE: return clt.Value.TRUE;
+            case Value.FALSE: return clt.Value.FALSE;
         }
         if (this.type === typ.NUMBER) {
-            return new clt.Literal(parseFloat(this.str));
+            return new clt.Value(parseFloat(this.str));
         }
         return null;
     }
 }
-Literal.TRUE = new Literal(wrd.TRUE, typ.BOOL);
-Literal.FALSE = new Literal(wrd.FALSE, typ.BOOL);
-exports.Literal = Literal;
+Value.TRUE = new Value(wrd.TRUE, typ.BOOL);
+Value.FALSE = new Value(wrd.FALSE, typ.BOOL);
+exports.Value = Value;
 class Let extends Term {
     constructor(arg, bound, body) {
         super();
@@ -80,7 +80,7 @@ class Let extends Term {
     }
     checkType(env = []) {
         const boundType = this.bound.checkType(env);
-        const newEnv = new type_rule_1.default(this.arg.label, boundType);
+        const newEnv = new type_env_1.default(this.arg.label, boundType);
         return this.type = this.body.checkType([newEnv, ...env]);
     }
     compile() {
@@ -97,7 +97,7 @@ class Fun extends Term {
         this.body = body;
     }
     checkType(env = []) {
-        const newEnv = new type_rule_1.default(this.arg.label, this.argType);
+        const newEnv = new type_env_1.default(this.arg.label, this.argType);
         const bodyType = this.body.checkType([newEnv, ...env]);
         return this.type = new typ.FunType(this.argType, bodyType);
     }
@@ -111,7 +111,7 @@ class AsyncFun extends Fun {
         super(arg, argType, body);
     }
     checkType(env = []) {
-        const newEnv = new type_rule_1.default(this.arg.label, this.argType);
+        const newEnv = new type_env_1.default(this.arg.label, this.argType);
         const bodyType = this.body.checkType([newEnv, ...env]);
         return this.type = new typ.AsyncFunType(this.argType, bodyType);
     }
