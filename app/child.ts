@@ -3,10 +3,10 @@ import { Term, FutureMessage } from './clterm';
 
 process.on('message', async ({ term: obj }: FutureMessage) => {
   try {
-    console.log('<recv>', inspect(obj, { depth: Infinity, colors: true }));
+    // console.log('<recv>', inspect(obj, { depth: Infinity, colors: true }));
     
     const term = Term.fromObject(obj);
-    console.log('<future>', inspect(term, { depth: Infinity, colors: true }));
+    // console.log('<future>', inspect(term, { depth: Infinity, colors: true }));
     const evaluated = await term.evaluate();
     const message: FutureMessage = {
       term: evaluated,

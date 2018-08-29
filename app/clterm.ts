@@ -350,7 +350,7 @@ export class Application extends Term {
         result = abs.body.evaluate();
       }
       if (abs instanceof Primitive) {
-        console.log('primitive function:', abs);
+        // console.log('primitive function:', abs);
         
         result = abs.func(arg);
       }
@@ -384,7 +384,7 @@ export class Future extends Term {
 
   evaluate() {
     console.log('evaluate<Future>:', this.toString());
-    console.log(inspect(this.term, { depth: Infinity, colors: true }));
+    // console.log(inspect(this.term, { depth: Infinity, colors: true }));
     
 
     const child = fork(path.join(__dirname, './child'));

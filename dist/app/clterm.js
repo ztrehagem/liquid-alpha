@@ -1,6 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const util_1 = require("util");
 const wrd = require("./word");
 const child_process_1 = require("child_process");
 const path = require("path");
@@ -264,7 +263,6 @@ class Application extends Term {
                 result = abs.body.evaluate();
             }
             if (abs instanceof Primitive) {
-                console.log('primitive function:', abs);
                 result = abs.func(arg);
             }
             console.log('result<Application> of', before, ': \n\t', result.toString());
@@ -290,7 +288,6 @@ class Future extends Term {
     }
     evaluate() {
         console.log('evaluate<Future>:', this.toString());
-        console.log(util_1.inspect(this.term, { depth: Infinity, colors: true }));
         const child = child_process_1.fork(path.join(__dirname, './child'));
         child.on('error', (e) => {
             console.error('<!> error in child process:', e);
