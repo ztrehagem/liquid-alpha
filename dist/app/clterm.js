@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const wrd = require("./word");
+const child_process_1 = require("child_process");
+const path = require("path");
 const FUTURE_DELAY_MAX = 2000;
 const concrete = (values, then) => {
     if (values.some(value => value instanceof Promise)) {
-        console.log('!!found Promise in:', values.toString());
         return Promise.all(values).then(then);
     }
     else {
@@ -22,8 +23,8 @@ class EvalEnv {
 }
 class Term {
     constructor() {
+        this.name = Term.name;
         this.env = [];
-        this.promise = null;
     }
     evaluate() {
         return this;
@@ -34,11 +35,47 @@ class Term {
     toString() {
         return '<None>';
     }
+    static fromObject(term) {
+        let t;
+        switch (term.name) {
+            case Term.name: throw new Error('fuzzy term');
+            case Variable.name:
+                t = Variable.fromObject(term);
+                break;
+            case Primitive.name:
+                t = Primitive.fromObject(term);
+                break;
+            case Value.name:
+                t = Value.fromObject(term);
+                break;
+            case Lambda.name:
+                t = Lambda.fromObject(term);
+                break;
+            case Pair.name:
+                t = Pair.fromObject(term);
+                break;
+            case PairCar.name:
+                t = PairCar.fromObject(term);
+                break;
+            case PairCdr.name:
+                t = PairCdr.fromObject(term);
+                break;
+            case Application.name:
+                t = Application.fromObject(term);
+                break;
+            case Future.name:
+                t = Future.fromObject(term);
+                break;
+        }
+        t.env.forEach(env => env.term = Term.fromObject(env.term));
+        return t;
+    }
 }
 exports.Term = Term;
 class Variable extends Term {
     constructor(label) {
         super();
+        this.name = Variable.name;
         this.label = label;
     }
     addEnv(...env) {
@@ -55,11 +92,15 @@ class Variable extends Term {
     toString() {
         return this.label;
     }
+    static fromObject(term) {
+        return new Variable(term.label);
+    }
 }
 exports.Variable = Variable;
 class Primitive extends Term {
     constructor(str, func) {
         super();
+        this.name = Primitive.name;
         this.str = str;
         this.func = func;
     }
@@ -72,6 +113,9 @@ class Primitive extends Term {
     }
     toString() {
         return this.str;
+    }
+    static fromObject(term) {
+        return new Primitive(term.str, term.func);
     }
 }
 Primitive.AND = new Primitive(wrd.AND, (arg) => {
@@ -90,6 +134,7 @@ exports.Primitive = Primitive;
 class Value extends Term {
     constructor(value) {
         super();
+        this.name = Value.name;
         this.value = value;
     }
     addEnv(...env) {
@@ -102,6 +147,9 @@ class Value extends Term {
     toString() {
         return this.value.toString();
     }
+    static fromObject(term) {
+        return new Value(term.value);
+    }
 }
 Value.TRUE = new Value(true);
 Value.FALSE = new Value(false);
@@ -109,6 +157,7 @@ exports.Value = Value;
 class Lambda extends Term {
     constructor(arg, body) {
         super();
+        this.name = Lambda.name;
         this.arg = arg;
         this.body = body;
     }
@@ -123,11 +172,15 @@ class Lambda extends Term {
     toString() {
         return `(λ${this.arg}.${this.body})`;
     }
+    static fromObject(term) {
+        return new Lambda(Variable.fromObject(term.arg), Term.fromObject(term.body));
+    }
 }
 exports.Lambda = Lambda;
 class Pair extends Term {
     constructor(car, cdr) {
         super();
+        this.name = Pair.name;
         this.car = car;
         this.cdr = cdr;
     }
@@ -146,11 +199,15 @@ class Pair extends Term {
     toString() {
         return `(${this.car}, ${this.cdr})`;
     }
+    static fromObject(term) {
+        return new Pair(Term.fromObject(term.car), Term.fromObject(term.cdr));
+    }
 }
 exports.Pair = Pair;
 class PairCar extends Term {
     constructor(pair) {
         super();
+        this.name = PairCar.name;
         this.pair = pair;
     }
     addEnv(...env) {
@@ -172,11 +229,15 @@ class PairCar extends Term {
     toString() {
         return `${this.pair}.1`;
     }
+    static fromObject(term) {
+        return new PairCar(Term.fromObject(term.pair));
+    }
 }
 exports.PairCar = PairCar;
 class PairCdr extends Term {
     constructor(pair) {
         super();
+        this.name = PairCdr.name;
         this.pair = pair;
     }
     addEnv(...env) {
@@ -196,11 +257,15 @@ class PairCdr extends Term {
     toString() {
         return `${this.pair}.2`;
     }
+    static fromObject(term) {
+        return new PairCdr(Term.fromObject(term.pair));
+    }
 }
 exports.PairCdr = PairCdr;
 class Application extends Term {
     constructor(abs, arg) {
         super();
+        this.name = Application.name;
         this.abs = abs;
         this.arg = arg;
     }
@@ -234,11 +299,15 @@ class Application extends Term {
     toString() {
         return `(${this.abs} ${this.arg})`;
     }
+    static fromObject(term) {
+        return new Application(Term.fromObject(term.abs), Term.fromObject(term.arg));
+    }
 }
 exports.Application = Application;
 class Future extends Term {
     constructor(term) {
         super();
+        this.name = Future.name;
         this.term = term;
     }
     addEnv(...env) {
@@ -247,18 +316,31 @@ class Future extends Term {
     }
     evaluate() {
         console.log('evaluate<Future>:', this.toString());
-        return new Promise((resolve) => {
-            if (!FUTURE_DELAY_MAX) {
-                resolve(this.term.evaluate());
-            }
-            else {
-                const delay = Math.floor(Math.random() * FUTURE_DELAY_MAX);
-                setTimeout(() => resolve(this.term.evaluate()), delay);
-            }
+        const child = child_process_1.fork(path.join(__dirname, './child'));
+        child.on('error', (e) => {
+            console.error('<!> error in child process:', e);
+            throw e;
+        });
+        return new Promise((resolve, reject) => {
+            child.on('message', ({ term: evaluated, error }) => {
+                if (error) {
+                    reject(error);
+                }
+                else {
+                    resolve(Term.fromObject(evaluated));
+                }
+            });
+            const message = {
+                term: this.term,
+            };
+            child.send(message);
         });
     }
     toString() {
         return `(future ${this.term})`;
+    }
+    static fromObject(term) {
+        return new Future(Term.fromObject(term.term));
     }
 }
 exports.Future = Future;
