@@ -1,0 +1,5 @@
+let f =
+  async fun x: Bool =
+    not x
+in
+  f false

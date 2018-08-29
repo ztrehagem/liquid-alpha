@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const util_1 = require("util");
 const lexer_1 = require("./app/lexer");
 const parser_1 = require("./app/parser");
-exports.exec = (lqd) => {
+exports.exec = async (lqd) => {
     console.log('-------- Liquid --------');
     console.log(lqd);
     console.log('-------- tokenize --------');
@@ -21,7 +21,7 @@ exports.exec = (lqd) => {
     console.log('-------- core Liquid --------');
     console.log(compiled.toString());
     console.log('-------- evaluate --------');
-    const evaluated = compiled.evaluate();
+    const evaluated = await compiled.evaluate();
     console.log('-------- result --------');
     console.log(evaluated.toString());
 };

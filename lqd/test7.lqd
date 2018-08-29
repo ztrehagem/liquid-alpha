@@ -1,0 +1,1 @@
+((async fun x: Bool = x) true, (async fun y: Bool = y) false).1

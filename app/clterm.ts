@@ -1,5 +1,16 @@
 import * as wrd from './word';
 
+const FUTURE_DELAY_MAX = 2000;
+
+const concrete = (values: (Term | Promise<Term>)[], then: (results: Term[]) => Term | Promise<Term>) => {
+  if (values.some(value => value instanceof Promise)) {
+    console.log('!!found Promise in:', values.toString());
+    return Promise.all(values).then(then);
+  } else {
+    return then(<Term[]>values);
+  }
+}
+
 class EvalEnv {
   label: string;
   term: Term;
@@ -16,8 +27,9 @@ class EvalEnv {
 
 export class Term {
   env: EvalEnv[] = [];
+  promise: Promise<Term> = null;
 
-  evaluate() {
+  evaluate(): Term | Promise<Term> {
     return <Term>this;
   }
 
@@ -162,9 +174,11 @@ export class Pair extends Term {
 
   evaluate() {
     console.log('evaluate<Pair>:', this.toString());
-    this.car = this.car.evaluate();
-    this.cdr = this.cdr.evaluate();
-    return <Pair>this;
+    const car = this.car.evaluate();
+    const cdr = this.cdr.evaluate();
+
+    const result = concrete([ car, cdr ], ([ car, cdr ]) => new Pair(car, cdr));
+    return result;
   }
 
   toString() {
@@ -187,11 +201,14 @@ export class PairCar extends Term {
 
   evaluate() {
     console.log('evaluate<PairCar>:', this.toString());
-    this.pair = this.pair.evaluate();
-    if (!(this.pair instanceof Pair)) {
-      throw new Error(`runtime error: expected <Pair> but got ${this.pair}`);
-    }
-    return this.pair.car;
+    const pair = this.pair.evaluate();
+    return concrete([ pair ], ([ pair ]) => {
+      if (!(pair instanceof Pair)) {
+        throw new Error(`runtime error: expected <Pair> but got ${pair}`);
+      } else {
+        return pair.car;
+      }
+    });
   }
 
   toString() {
@@ -214,11 +231,13 @@ export class PairCdr extends Term {
 
   evaluate() {
     console.log('evaluate<PairCar>:', this.toString());
-    this.pair = this.pair.evaluate();
-    if (!(this.pair instanceof Pair)) {
-      throw new Error(`runtime error: expected <Pair> but got ${this.pair}`);
-    }
-    return this.pair.cdr;
+    const pair = this.pair.evaluate();
+    return concrete([ pair ], ([ pair ]) => {
+      if (!(pair instanceof Pair)) {
+        throw new Error(`runtime error: expected <Pair> but got ${pair}`);
+      }
+      return pair.cdr;
+    })
   }
 
   toString() {
@@ -246,24 +265,25 @@ export class Application extends Term {
     const before = this.toString()
     console.log('evaluate<Application>:', before);
     super.evaluate();
-    this.abs = this.abs.evaluate();
-    this.arg = this.arg.evaluate();
-    console.log('applicating of', this.toString(), 'from', before);
-    
-    let result;
-    if (this.abs instanceof Lambda) {
-      const newEnv = new EvalEnv(this.abs.arg.label, this.arg);
-      this.abs.body.addEnv(newEnv);
-      console.log('application env:', this.abs.body.env.toString());
-      
-      result = this.abs.body.evaluate();
-    }
-    if (this.abs instanceof Primitive) {
-      result = this.abs.func(this.arg);
-    }
-    console.log('result<Application> of', before, ': \n\t', result.toString());
-    
-    return result;
+    const abs = this.abs.evaluate();
+    const arg = this.arg.evaluate();
+    console.log('applicating of', abs.toString(), 'with', arg.toString(), 'from', before);
+   
+    return concrete([ abs, arg ], ([ abs, arg ]) => {
+      let result;
+      if (abs instanceof Lambda) {
+        const newEnv = new EvalEnv(abs.arg.label, arg);
+        abs.body.addEnv(newEnv);
+        console.log('application env:', abs.body.env.toString());
+
+        result = abs.body.evaluate();
+      }
+      if (abs instanceof Primitive) {
+        result = abs.func(arg);
+      }
+      console.log('result<Application> of', before, ': \n\t', result.toString());
+      return result;
+    });
   }
 
   toString() {
@@ -287,8 +307,18 @@ export class Future extends Term {
   evaluate() {
     console.log('evaluate<Future>:', this.toString());
     
-    this.term = this.term.evaluate();
-    return this.term;
+    // production
+    // return new Promise<Term>(resolve => resolve(this.term.evaluate()));
+
+    // development
+    return new Promise<Term>((resolve) => {
+      if (!FUTURE_DELAY_MAX) {
+        resolve(this.term.evaluate());
+      } else {
+        const delay = Math.floor(Math.random() * FUTURE_DELAY_MAX);
+        setTimeout(() => resolve(this.term.evaluate()), delay);
+      }
+    });
   }
 
   toString() {
