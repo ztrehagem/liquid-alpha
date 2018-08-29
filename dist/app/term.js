@@ -58,14 +58,11 @@ class Value extends Term {
         return this.type;
     }
     compile() {
-        switch (this) {
-            case Value.TRUE: return clt.Value.TRUE;
-            case Value.FALSE: return clt.Value.FALSE;
+        switch (this.type) {
+            case typ.BOOL: return new clt.Value(this.str === wrd.TRUE);
+            case typ.NUMBER: return new clt.Value(parseFloat(this.str));
+            default: return null;
         }
-        if (this.type === typ.NUMBER) {
-            return new clt.Value(parseFloat(this.str));
-        }
-        return null;
     }
 }
 Value.TRUE = new Value(wrd.TRUE, typ.BOOL);

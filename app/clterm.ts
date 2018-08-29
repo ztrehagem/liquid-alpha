@@ -48,22 +48,19 @@ export class Term {
     return '<None>';
   }
 
-  static fromObject(term: any) {
-    let t: Term;
+  static fromObject(term: any): Term {
     switch (term.name) {
       case Term.name: throw new Error('fuzzy term');
-      case Variable.name: t = Variable.fromObject(term); break;
-      case Primitive.name: t = Primitive.fromObject(term); break;
-      case Value.name: t = Value.fromObject(term); break;
-      case Lambda.name: t = Lambda.fromObject(term); break;
-      case Pair.name: t = Pair.fromObject(term); break;
-      case PairCar.name: t = PairCar.fromObject(term); break;
-      case PairCdr.name: t = PairCdr.fromObject(term); break;
-      case Application.name: t = Application.fromObject(term); break;
-      case Future.name: t = Future.fromObject(term); break;
+      case Variable.name: return Variable.fromObject(term);
+      case Primitive.name: return Primitive.fromObject(term);
+      case Value.name: return Value.fromObject(term);
+      case Lambda.name: return Lambda.fromObject(term);
+      case Pair.name: return Pair.fromObject(term);
+      case PairCar.name: return PairCar.fromObject(term);
+      case PairCdr.name: return PairCdr.fromObject(term);
+      case Application.name: return Application.fromObject(term);
+      case Future.name: return Future.fromObject(term);
     }
-    // t.env.forEach(env => env.term = Term.fromObject(env.term));
-    return t;
   }
 }
 
@@ -115,18 +112,16 @@ export class Variable extends Term {
 export class Primitive extends Term {
   name: string = Primitive.name;
   static AND = new Primitive(wrd.AND, (arg: Term) => {
-    console.log(arg);
-    
-    if (!(arg instanceof Pair) || [arg.car, arg.cdr].some(t => t !== Value.TRUE && t !== Value.FALSE)) {
-      throw new Error(`runtime error: expected (<Bool>, <Bool>) but got ${arg}`);
+    if (!(arg instanceof Pair && arg.car instanceof Value && arg.cdr instanceof Value)) {
+      throw new Error(`runtime error: expected (<Value>, <Value>) but got ${arg}`);
     }
-    return (arg.car === Value.TRUE && arg.cdr === Value.TRUE) ? Value.TRUE : Value.FALSE;
+    return (arg.car.value && arg.cdr.value) ? new Value(true) : new Value(false);
   });
   static NOT = new Primitive(wrd.NOT, (arg: Term) => {
-    if (!(arg instanceof Value) || [Value.TRUE, Value.FALSE].every(v => v !== arg)) {
-      throw new Error(`runtime error: expected <Bool> but got ${arg}`);
+    if (!(arg instanceof Value)) {
+      throw new Error(`runtime error: expected <Value> but got ${arg}`);
     }
-    return arg === Value.TRUE ? Value.FALSE : Value.TRUE;
+    return arg.value === true ? new Value(false) : new Value(true);
   });
 
   str: string;
@@ -161,9 +156,6 @@ export class Primitive extends Term {
 
 export class Value extends Term {
   name: string = Value.name;
-  static TRUE = new Value(true);
-  static FALSE = new Value(false);
-
   value: boolean | number;
 
   constructor(value: boolean | number) {
@@ -185,11 +177,7 @@ export class Value extends Term {
   }
 
   static fromObject(term: any) {
-    switch (term.value) {
-      case true: return Value.TRUE;
-      case false: return Value.FALSE;
-      default: return new Value(term.value);
-    }
+    return new Value(term.value);
   }
 }
 
