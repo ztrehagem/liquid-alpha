@@ -1,11 +1,17 @@
 import { inspect } from 'util';
 import * as wrd from './word';
+import { fork } from 'child_process';
+import * as path from 'path';
 
 const FUTURE_DELAY_MAX = 2000;
 
+export type FutureMessage = {
+  term: Term,
+  error?: string,
+}
+
 const concrete = (values: (Term | Promise<Term>)[], then: (results: Term[]) => Term | Promise<Term>) => {
   if (values.some(value => value instanceof Promise)) {
-    console.log('!!found Promise in:', values.toString());
     return Promise.all(values).then(then);
   } else {
     return then(<Term[]>values);
@@ -25,10 +31,11 @@ class EvalEnv {
     return `\n\t{${this.label} -> ${this.term}}`;
     // return `\n\t{${this.label} -> ${this.term} : ${this.term.env.map(e => e.label).join(',')}}`;
   }
-} 
+}
 
 export class Term {
-  promise: Promise<Term> = null;
+  name: string = Term.name;
+  // env: EvalEnv[] = [];
 
   evaluate(): Term | Promise<Term> {
     return <Term>this;
@@ -40,9 +47,28 @@ export class Term {
   toString() {
     return '<None>';
   }
+
+  static fromObject(term: any) {
+    let t: Term;
+    switch (term.name) {
+      case Term.name: throw new Error('fuzzy term');
+      case Variable.name: t = Variable.fromObject(term); break;
+      case Primitive.name: t = Primitive.fromObject(term); break;
+      case Value.name: t = Value.fromObject(term); break;
+      case Lambda.name: t = Lambda.fromObject(term); break;
+      case Pair.name: t = Pair.fromObject(term); break;
+      case PairCar.name: t = PairCar.fromObject(term); break;
+      case PairCdr.name: t = PairCdr.fromObject(term); break;
+      case Application.name: t = Application.fromObject(term); break;
+      case Future.name: t = Future.fromObject(term); break;
+    }
+    // t.env.forEach(env => env.term = Term.fromObject(env.term));
+    return t;
+  }
 }
 
 export class Variable extends Term {
+  name: string = Variable.name;
   label: string;
   // env: EvalEnv[] = [];
   term: Term;
@@ -79,9 +105,14 @@ export class Variable extends Term {
   toString() {
     return this.label;
   }
+
+  static fromObject(term: any) {
+    return new Variable(term.label);
+  }
 }
 
 export class Primitive extends Term {
+  name: string = Primitive.name;
   static AND = new Primitive(wrd.AND, (arg: Term) => {
     if (!(arg instanceof Pair) || [arg.car, arg.cdr].some(t => t !== Value.TRUE && t !== Value.FALSE)) {
       throw new Error(`runtime error: expected (<Bool>, <Bool>) but got ${arg}`);
@@ -116,9 +147,14 @@ export class Primitive extends Term {
   toString() {
     return this.str;
   }
+
+  static fromObject(term: any) {
+    return new Primitive(term.str, term.func);
+  }
 }
 
 export class Value extends Term {
+  name: string = Value.name;
   static TRUE = new Value(true);
   static FALSE = new Value(false);
 
@@ -141,9 +177,14 @@ export class Value extends Term {
   toString() {
     return this.value.toString();
   }
+
+  static fromObject(term: any) {
+    return new Value(term.value);
+  }
 }
 
 export class Lambda extends Term {
+  name: string = Lambda.name;
   arg: Variable;
   body: Term;
 
@@ -166,9 +207,14 @@ export class Lambda extends Term {
   toString() {
     return `(λ${this.arg}.${this.body})`;
   }
+
+  static fromObject(term: any) {
+    return new Lambda(Variable.fromObject(term.arg), Term.fromObject(term.body));
+  }
 }
 
 export class Pair extends Term {
+  name: string = Pair.name;
   car: Term;
   cdr: Term;
 
@@ -196,9 +242,14 @@ export class Pair extends Term {
   toString() {
     return `(${this.car}, ${this.cdr})`;
   }
+
+  static fromObject(term: any) {
+    return new Pair(Term.fromObject(term.car), Term.fromObject(term.cdr));
+  }
 }
 
 export class PairCar extends Term {
+  name: string = PairCar.name;
   pair: Term;
 
   constructor(pair: Term) {
@@ -226,9 +277,14 @@ export class PairCar extends Term {
   toString() {
     return `${this.pair}.1`;
   }
+
+  static fromObject(term: any) {
+    return new PairCar(Term.fromObject(term.pair));
+  }
 }
 
 export class PairCdr extends Term {
+  name: string = PairCdr.name;
   pair: Term;
 
   constructor(pair: Term) {
@@ -255,9 +311,14 @@ export class PairCdr extends Term {
   toString() {
     return `${this.pair}.2`;
   }
+
+  static fromObject(term: any) {
+    return new PairCdr(Term.fromObject(term.pair));
+  }
 }
 
 export class Application extends Term {
+  name: string = Application.name;
   abs: Term;
   arg: Term;
 
@@ -301,9 +362,14 @@ export class Application extends Term {
   toString() {
     return `(${this.abs} ${this.arg})`;
   }
+
+  static fromObject(term: any) {
+    return new Application(Term.fromObject(term.abs), Term.fromObject(term.arg));
+  }
 }
 
 export class Future extends Term {
+  name: string = Future.name;
   term: Term;
 
   constructor(term: Term) {
@@ -321,21 +387,45 @@ export class Future extends Term {
     console.log(inspect(this.term, { depth: Infinity, colors: true }));
     
 
-    // production
+    const child = fork(path.join(__dirname, './child'));
+
+    child.on('error', (e) => {
+      console.error('<!> error in child process:', e);
+      throw e;
+    });
+
+    return new Promise<Term>((resolve, reject) => {
+      child.on('message', ({ term: evaluated, error }: FutureMessage) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(Term.fromObject(evaluated));
+        }
+      });
+
+      const message: FutureMessage = {
+        term: this.term,
+      };
+      child.send(message);
+    });
+
     // return new Promise<Term>(resolve => resolve(this.term.evaluate()));
 
-    // development
-    return new Promise<Term>((resolve) => {
-      if (!FUTURE_DELAY_MAX) {
-        resolve(this.term.evaluate());
-      } else {
-        const delay = Math.floor(Math.random() * FUTURE_DELAY_MAX);
-        setTimeout(() => resolve(this.term.evaluate()), delay);
-      }
-    });
+    // return new Promise<Term>((resolve) => {
+    //   if (!FUTURE_DELAY_MAX) {
+    //     resolve(this.term.evaluate());
+    //   } else {
+    //     const delay = Math.floor(Math.random() * FUTURE_DELAY_MAX);
+    //     setTimeout(() => resolve(this.term.evaluate()), delay);
+    //   }
+    // });
   }
-
+  
   toString() {
     return `(future ${this.term})`;
+  }
+
+  static fromObject(term: any) {
+    return new Future(Term.fromObject(term.term));
   }
 }
