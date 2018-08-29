@@ -1,3 +1,4 @@
+import { inspect } from 'util';
 import * as wrd from './word';
 
 const FUTURE_DELAY_MAX = 2000;
@@ -21,12 +22,12 @@ class EvalEnv {
   }
 
   toString() {
-    return `\n\t{${this.label} -> ${this.term} : ${this.term.env.map(e => e.label).join(',')}}`;
+    return `\n\t{${this.label} -> ${this.term}}`;
+    // return `\n\t{${this.label} -> ${this.term} : ${this.term.env.map(e => e.label).join(',')}}`;
   }
 } 
 
 export class Term {
-  env: EvalEnv[] = [];
   promise: Promise<Term> = null;
 
   evaluate(): Term | Promise<Term> {
@@ -34,8 +35,6 @@ export class Term {
   }
 
   addEnv(...env: EvalEnv[]) {
-    // console.log('addEnv:', this.toString(), env.toString());
-    this.env.unshift(...env);
   }
 
   toString() {
@@ -45,23 +44,36 @@ export class Term {
 
 export class Variable extends Term {
   label: string;
+  // env: EvalEnv[] = [];
+  term: Term;
 
   constructor(label: string) {
     super();
     this.label = label;
   }
 
-  addEnv(...env: EvalEnv[]) {
-    super.addEnv(...env);
+  // addEnv(...env: EvalEnv[]) {
+  //   this.env.unshift(...env);
+  // }
+  addEnv(...envs: EvalEnv[]) {
+    const env = envs.find(env => env.label === this.label);
+    this.term = env ? env.term : this.term;
   }
 
+  // evaluate() {
+  //   const env = this.env.find(env => env.label === this.label);
+  //   if (!env) {
+  //     throw new Error(`runtime error: given no bindings for "${this.label}" in environment ${this.env}`);
+  //   }
+  //   console.log('evaluate<Variable>:', this.toString(), '=>', env.term.toString());
+  //   return env.term;
+  // }
   evaluate() {
-    console.log('evaluate<Variable>:', this.toString());
-    const env = this.env.find(env => env.label === this.label);
-    if (!env) {
-      throw new Error(`runtime error: given no bindings for "${this.label}" in environment ${this.env}`);
+    if (!this.term) {
+      throw new Error(`runtime error: given no bindings for "${this.label}"`);
     }
-    return env.term;
+    console.log('evaluate<Variable>:', this.toString(), '=>', this.term.toString());
+    return this.term;
   }
 
   toString() {
@@ -142,7 +154,7 @@ export class Lambda extends Term {
   }
 
   addEnv(...env: EvalEnv[]) {
-    super.addEnv(...env);
+    // super.addEnv(...env);
     this.body.addEnv(...env);
   }
 
@@ -167,7 +179,7 @@ export class Pair extends Term {
   }
 
   addEnv(...env: EvalEnv[]) {
-    super.addEnv(...env);
+    // super.addEnv(...env);
     this.car.addEnv(...env);
     this.cdr.addEnv(...env);
   }
@@ -195,7 +207,7 @@ export class PairCar extends Term {
   }
 
   addEnv(...env: EvalEnv[]) {
-    super.addEnv(...env);
+    // super.addEnv(...env);
     this.pair.addEnv(...env);
   }
 
@@ -225,7 +237,7 @@ export class PairCdr extends Term {
   }
 
   addEnv(...env: EvalEnv[]) {
-    super.addEnv(...env);
+    // super.addEnv(...env);
     this.pair.addEnv(...env);
   }
 
@@ -256,7 +268,7 @@ export class Application extends Term {
   }
 
   addEnv(...env: EvalEnv[]) {
-    super.addEnv(...env);
+    // super.addEnv(...env);
     this.abs.addEnv(...env);
     this.arg.addEnv(...env);
   }
@@ -274,7 +286,7 @@ export class Application extends Term {
       if (abs instanceof Lambda) {
         const newEnv = new EvalEnv(abs.arg.label, arg);
         abs.body.addEnv(newEnv);
-        console.log('application env:', abs.body.env.toString());
+        // console.log('application env:', abs.body.env.toString());
 
         result = abs.body.evaluate();
       }
@@ -300,13 +312,15 @@ export class Future extends Term {
   }
 
   addEnv(...env: EvalEnv[]) {
-    super.addEnv(...env);
+    // super.addEnv(...env);
     this.term.addEnv(...env);
   }
 
   evaluate() {
     console.log('evaluate<Future>:', this.toString());
+    console.log(inspect(this.term, { depth: Infinity, colors: true }));
     
+
     // production
     // return new Promise<Term>(resolve => resolve(this.term.evaluate()));
 
