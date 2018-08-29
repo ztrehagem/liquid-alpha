@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const util_1 = require("util");
 const wrd = require("./word");
 const child_process_1 = require("child_process");
 const path = require("path");
@@ -18,19 +19,17 @@ class EvalEnv {
         this.term = term;
     }
     toString() {
-        return `\n\t{${this.label} -> ${this.term} : ${this.term.env.map(e => e.label).join(',')}}`;
+        return `\n\t{${this.label} -> ${this.term}}`;
     }
 }
 class Term {
     constructor() {
         this.name = Term.name;
-        this.env = [];
     }
     evaluate() {
         return this;
     }
     addEnv(...env) {
-        this.env.unshift(...env);
     }
     toString() {
         return '<None>';
@@ -67,33 +66,33 @@ class Term {
                 t = Future.fromObject(term);
                 break;
         }
-        t.env.forEach(env => env.term = Term.fromObject(env.term));
         return t;
     }
 }
 exports.Term = Term;
 class Variable extends Term {
-    constructor(label) {
+    constructor(label, term) {
         super();
         this.name = Variable.name;
         this.label = label;
+        this.term = term;
     }
-    addEnv(...env) {
-        super.addEnv(...env);
+    addEnv(...envs) {
+        const env = envs.find(env => env.label === this.label);
+        this.term = env ? env.term : this.term;
     }
     evaluate() {
-        console.log('evaluate<Variable>:', this.toString());
-        const env = this.env.find(env => env.label === this.label);
-        if (!env) {
-            throw new Error(`runtime error: given no bindings for "${this.label}" in environment ${this.env}`);
+        if (!this.term) {
+            throw new Error(`runtime error: given no bindings for "${this.label}"`);
         }
-        return env.term;
+        console.log('evaluate<Variable>:', this.toString(), '=>', this.term.toString());
+        return this.term;
     }
     toString() {
         return this.label;
     }
     static fromObject(term) {
-        return new Variable(term.label);
+        return new Variable(term.label, term.term && Term.fromObject(term.term));
     }
 }
 exports.Variable = Variable;
@@ -115,10 +114,14 @@ class Primitive extends Term {
         return this.str;
     }
     static fromObject(term) {
-        return new Primitive(term.str, term.func);
+        switch (term.str) {
+            case wrd.AND: return Primitive.AND;
+            case wrd.NOT: return Primitive.NOT;
+        }
     }
 }
 Primitive.AND = new Primitive(wrd.AND, (arg) => {
+    console.log(arg);
     if (!(arg instanceof Pair) || [arg.car, arg.cdr].some(t => t !== Value.TRUE && t !== Value.FALSE)) {
         throw new Error(`runtime error: expected (<Bool>, <Bool>) but got ${arg}`);
     }
@@ -148,7 +151,11 @@ class Value extends Term {
         return this.value.toString();
     }
     static fromObject(term) {
-        return new Value(term.value);
+        switch (term.value) {
+            case true: return Value.TRUE;
+            case false: return Value.FALSE;
+            default: return new Value(term.value);
+        }
     }
 }
 Value.TRUE = new Value(true);
@@ -162,7 +169,6 @@ class Lambda extends Term {
         this.body = body;
     }
     addEnv(...env) {
-        super.addEnv(...env);
         this.body.addEnv(...env);
     }
     evaluate() {
@@ -185,7 +191,6 @@ class Pair extends Term {
         this.cdr = cdr;
     }
     addEnv(...env) {
-        super.addEnv(...env);
         this.car.addEnv(...env);
         this.cdr.addEnv(...env);
     }
@@ -211,7 +216,6 @@ class PairCar extends Term {
         this.pair = pair;
     }
     addEnv(...env) {
-        super.addEnv(...env);
         this.pair.addEnv(...env);
     }
     evaluate() {
@@ -241,7 +245,6 @@ class PairCdr extends Term {
         this.pair = pair;
     }
     addEnv(...env) {
-        super.addEnv(...env);
         this.pair.addEnv(...env);
     }
     evaluate() {
@@ -270,7 +273,6 @@ class Application extends Term {
         this.arg = arg;
     }
     addEnv(...env) {
-        super.addEnv(...env);
         this.abs.addEnv(...env);
         this.arg.addEnv(...env);
     }
@@ -286,10 +288,10 @@ class Application extends Term {
             if (abs instanceof Lambda) {
                 const newEnv = new EvalEnv(abs.arg.label, arg);
                 abs.body.addEnv(newEnv);
-                console.log('application env:', abs.body.env.toString());
                 result = abs.body.evaluate();
             }
             if (abs instanceof Primitive) {
+                console.log('primitive function:', abs);
                 result = abs.func(arg);
             }
             console.log('result<Application> of', before, ': \n\t', result.toString());
@@ -311,11 +313,11 @@ class Future extends Term {
         this.term = term;
     }
     addEnv(...env) {
-        super.addEnv(...env);
         this.term.addEnv(...env);
     }
     evaluate() {
         console.log('evaluate<Future>:', this.toString());
+        console.log(util_1.inspect(this.term, { depth: Infinity, colors: true }));
         const child = child_process_1.fork(path.join(__dirname, './child'));
         child.on('error', (e) => {
             console.error('<!> error in child process:', e);

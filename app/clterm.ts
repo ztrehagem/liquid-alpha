@@ -73,9 +73,10 @@ export class Variable extends Term {
   // env: EvalEnv[] = [];
   term: Term;
 
-  constructor(label: string) {
+  constructor(label: string, term?: Term) {
     super();
     this.label = label;
+    this.term = term;
   }
 
   // addEnv(...env: EvalEnv[]) {
@@ -107,13 +108,15 @@ export class Variable extends Term {
   }
 
   static fromObject(term: any) {
-    return new Variable(term.label);
+    return new Variable(term.label, term.term && Term.fromObject(term.term));
   }
 }
 
 export class Primitive extends Term {
   name: string = Primitive.name;
   static AND = new Primitive(wrd.AND, (arg: Term) => {
+    console.log(arg);
+    
     if (!(arg instanceof Pair) || [arg.car, arg.cdr].some(t => t !== Value.TRUE && t !== Value.FALSE)) {
       throw new Error(`runtime error: expected (<Bool>, <Bool>) but got ${arg}`);
     }
@@ -149,7 +152,10 @@ export class Primitive extends Term {
   }
 
   static fromObject(term: any) {
-    return new Primitive(term.str, term.func);
+    switch (term.str) {
+      case wrd.AND: return Primitive.AND;
+      case wrd.NOT: return Primitive.NOT;
+    }
   }
 }
 
@@ -179,7 +185,11 @@ export class Value extends Term {
   }
 
   static fromObject(term: any) {
-    return new Value(term.value);
+    switch (term.value) {
+      case true: return Value.TRUE;
+      case false: return Value.FALSE;
+      default: return new Value(term.value);
+    }
   }
 }
 
@@ -352,6 +362,8 @@ export class Application extends Term {
         result = abs.body.evaluate();
       }
       if (abs instanceof Primitive) {
+        console.log('primitive function:', abs);
+        
         result = abs.func(arg);
       }
       console.log('result<Application> of', before, ': \n\t', result.toString());
