@@ -1,22 +1,17 @@
-# Liquid transpiler
+# Liquid Interpreter
 
-## transformation
+## Liquid
 
-- true
-  - true
-- (t, t)
-  - [t, t]
-- t.1
-  - t[0]
-- t.2
-  - t[1]
-- fun id: T = t
-  - (id) => t
-- t t
-  - t(t)
-- let id = t1 in t2
-  - { const id = t1; t2; }
-- not t
-  - not(t)
-- and t
-  - and(t)
+- **Liquid** - A calculus for asynchronous programming.
+  - Liquid: A typed tiny functional language.
+  - core Liquid: A intermediate language compiled from Liquid.
+
+As for details, refer to the [#Papers](#Papers).
+
+## Implementation
+WIP
+
+## Papers
+
+- [**Liquid: 非同期一階関数による並行計算体系**](http://www.ipsj.or.jp/award/9faeag0000004ej9-att/6J-05.pdf), 情報処理学会第80回全国大会, March 2018.
+- others (already submitted for publication)
