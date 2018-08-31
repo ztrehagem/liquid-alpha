@@ -4,7 +4,7 @@
 
 - **Liquid** - A calculus for asynchronous programming.
   - Liquid: A typed tiny functional language.
-  - core Liquid: A intermediate language compiled from Liquid.
+  - core Liquid: An intermediate language compiled from Liquid.
 
 As for details, refer to the [#Papers](#Papers).
 
