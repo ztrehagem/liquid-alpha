@@ -1,22 +1,9 @@
-import { inspect } from 'util';
+import { log, error, inspect } from './logger';
 import * as wrd from './word';
 import { fork } from 'child_process';
 import * as path from 'path';
 
 const FUTURE_DELAY_MAX = 2000;
-
-export type FutureMessage = {
-  term: Term,
-  error?: string,
-}
-
-const concrete = (values: (Term | Promise<Term>)[], then: (results: Term[]) => Term | Promise<Term>) => {
-  if (values.some(value => value instanceof Promise)) {
-    return Promise.all(values).then(then);
-  } else {
-    return then(<Term[]>values);
-  }
-}
 
 class EvalEnv {
   label: string;
@@ -29,13 +16,52 @@ class EvalEnv {
 
   toString() {
     return `\n\t{${this.label} -> ${this.term}}`;
-    // return `\n\t{${this.label} -> ${this.term} : ${this.term.env.map(e => e.label).join(',')}}`;
+  }
+}
+
+enum Kind {
+  Term,
+  Variable,
+  Primitive,
+  Value,
+  Lambda,
+  Pair,
+  PairCar,
+  PairCdr,
+  Application,
+  Future,
+}
+
+export type ProcessMessage = {
+  term: Object,
+  error?: string,
+}
+
+export const fromObject = (obj: any): Term => {
+  switch ((<Term>obj).kind) {
+    case Kind.Variable: return Variable.fromObject(obj);
+    case Kind.Primitive: return Primitive.fromObject(obj);
+    case Kind.Value: return Value.fromObject(obj);
+    case Kind.Lambda: return Lambda.fromObject(obj);
+    case Kind.Pair: return Pair.fromObject(obj);
+    case Kind.PairCar: return PairCar.fromObject(obj);
+    case Kind.PairCdr: return PairCdr.fromObject(obj);
+    case Kind.Application: return Application.fromObject(obj);
+    case Kind.Future: return Future.fromObject(obj);
+    default: throw new Error('cannot parse clterm');
+  }
+}
+
+const concrete = (values: (Term | Promise<Term>)[], then: (results: Term[]) => Term | Promise<Term>) => {
+  if (values.some(value => value instanceof Promise)) {
+    return Promise.all(values).then(then);
+  } else {
+    return then(<Term[]>values);
   }
 }
 
 export class Term {
-  name: string = Term.name;
-  // env: EvalEnv[] = [];
+  kind: Kind = Kind.Term;
 
   evaluate(): Term | Promise<Term> {
     return <Term>this;
@@ -47,27 +73,11 @@ export class Term {
   toString() {
     return '<None>';
   }
-
-  static fromObject(term: any): Term {
-    switch (term.name) {
-      case Term.name: throw new Error('fuzzy term');
-      case Variable.name: return Variable.fromObject(term);
-      case Primitive.name: return Primitive.fromObject(term);
-      case Value.name: return Value.fromObject(term);
-      case Lambda.name: return Lambda.fromObject(term);
-      case Pair.name: return Pair.fromObject(term);
-      case PairCar.name: return PairCar.fromObject(term);
-      case PairCdr.name: return PairCdr.fromObject(term);
-      case Application.name: return Application.fromObject(term);
-      case Future.name: return Future.fromObject(term);
-    }
-  }
 }
 
 export class Variable extends Term {
-  name: string = Variable.name;
+  kind: Kind = Kind.Variable;
   label: string;
-  // env: EvalEnv[] = [];
   term: Term;
 
   constructor(label: string, term?: Term) {
@@ -76,27 +86,16 @@ export class Variable extends Term {
     this.term = term;
   }
 
-  // addEnv(...env: EvalEnv[]) {
-  //   this.env.unshift(...env);
-  // }
   addEnv(...envs: EvalEnv[]) {
     const env = envs.find(env => env.label === this.label);
     this.term = env ? env.term : this.term;
   }
 
-  // evaluate() {
-  //   const env = this.env.find(env => env.label === this.label);
-  //   if (!env) {
-  //     throw new Error(`runtime error: given no bindings for "${this.label}" in environment ${this.env}`);
-  //   }
-  //   console.log('evaluate<Variable>:', this.toString(), '=>', env.term.toString());
-  //   return env.term;
-  // }
   evaluate() {
     if (!this.term) {
       throw new Error(`runtime error: given no bindings for "${this.label}"`);
     }
-    console.log('evaluate<Variable>:', this.toString(), '=>', this.term.toString());
+    log('evaluate<Variable>:', this.toString(), '=>', this.term.toString());
     return this.term;
   }
 
@@ -105,12 +104,12 @@ export class Variable extends Term {
   }
 
   static fromObject(term: any) {
-    return new Variable(term.label, term.term && Term.fromObject(term.term));
+    return new Variable(term.label, term.term && fromObject(term.term));
   }
 }
 
 export class Primitive extends Term {
-  name: string = Primitive.name;
+  kind: Kind = Kind.Primitive;
   static AND = new Primitive(wrd.AND, (arg: Term) => {
     if (!(arg instanceof Pair && arg.car instanceof Value && arg.cdr instanceof Value)) {
       throw new Error(`runtime error: expected (<Value>, <Value>) but got ${arg}`);
@@ -138,7 +137,7 @@ export class Primitive extends Term {
   }
   
   evaluate() {
-    console.log('evaluate<Primitive>:', this.toString());
+    log('evaluate<Primitive>:', this.toString());
     return <Primitive>this;
   }
 
@@ -155,7 +154,7 @@ export class Primitive extends Term {
 }
 
 export class Value extends Term {
-  name: string = Value.name;
+  kind: Kind = Kind.Value;
   value: boolean | number;
 
   constructor(value: boolean | number) {
@@ -168,7 +167,7 @@ export class Value extends Term {
   }
 
   evaluate() {
-    console.log('evaluate<Value>:', this.toString());
+    log('evaluate<Value>:', this.toString());
     return <Value>this;
   }
 
@@ -182,7 +181,7 @@ export class Value extends Term {
 }
 
 export class Lambda extends Term {
-  name: string = Lambda.name;
+  kind: Kind = Kind.Lambda;
   arg: Variable;
   body: Term;
 
@@ -193,12 +192,11 @@ export class Lambda extends Term {
   }
 
   addEnv(...env: EvalEnv[]) {
-    // super.addEnv(...env);
     this.body.addEnv(...env);
   }
 
   evaluate() {
-    console.log('evaluate<Lambda>:', this.toString());
+    log('evaluate<Lambda>:', this.toString());
     return <Lambda>this;
   }
 
@@ -207,12 +205,12 @@ export class Lambda extends Term {
   }
 
   static fromObject(term: any) {
-    return new Lambda(Variable.fromObject(term.arg), Term.fromObject(term.body));
+    return new Lambda(Variable.fromObject(term.arg), fromObject(term.body));
   }
 }
 
 export class Pair extends Term {
-  name: string = Pair.name;
+  kind: Kind = Kind.Pair;
   car: Term;
   cdr: Term;
 
@@ -223,13 +221,12 @@ export class Pair extends Term {
   }
 
   addEnv(...env: EvalEnv[]) {
-    // super.addEnv(...env);
     this.car.addEnv(...env);
     this.cdr.addEnv(...env);
   }
 
   evaluate() {
-    console.log('evaluate<Pair>:', this.toString());
+    log('evaluate<Pair>:', this.toString());
     const car = this.car.evaluate();
     const cdr = this.cdr.evaluate();
 
@@ -242,12 +239,12 @@ export class Pair extends Term {
   }
 
   static fromObject(term: any) {
-    return new Pair(Term.fromObject(term.car), Term.fromObject(term.cdr));
+    return new Pair(fromObject(term.car), fromObject(term.cdr));
   }
 }
 
 export class PairCar extends Term {
-  name: string = PairCar.name;
+  kind: Kind = Kind.PairCar;
   pair: Term;
 
   constructor(pair: Term) {
@@ -256,12 +253,11 @@ export class PairCar extends Term {
   }
 
   addEnv(...env: EvalEnv[]) {
-    // super.addEnv(...env);
     this.pair.addEnv(...env);
   }
 
   evaluate() {
-    console.log('evaluate<PairCar>:', this.toString());
+    log('evaluate<PairCar>:', this.toString());
     const pair = this.pair.evaluate();
     return concrete([ pair ], ([ pair ]) => {
       if (!(pair instanceof Pair)) {
@@ -277,12 +273,12 @@ export class PairCar extends Term {
   }
 
   static fromObject(term: any) {
-    return new PairCar(Term.fromObject(term.pair));
+    return new PairCar(fromObject(term.pair));
   }
 }
 
 export class PairCdr extends Term {
-  name: string = PairCdr.name;
+  kind: Kind = Kind.PairCdr;
   pair: Term;
 
   constructor(pair: Term) {
@@ -291,12 +287,11 @@ export class PairCdr extends Term {
   }
 
   addEnv(...env: EvalEnv[]) {
-    // super.addEnv(...env);
     this.pair.addEnv(...env);
   }
 
   evaluate() {
-    console.log('evaluate<PairCar>:', this.toString());
+    log('evaluate<PairCar>:', this.toString());
     const pair = this.pair.evaluate();
     return concrete([ pair ], ([ pair ]) => {
       if (!(pair instanceof Pair)) {
@@ -311,12 +306,12 @@ export class PairCdr extends Term {
   }
 
   static fromObject(term: any) {
-    return new PairCdr(Term.fromObject(term.pair));
+    return new PairCdr(fromObject(term.pair));
   }
 }
 
 export class Application extends Term {
-  name: string = Application.name;
+  kind: Kind = Kind.Application;
   abs: Term;
   arg: Term;
 
@@ -327,34 +322,28 @@ export class Application extends Term {
   }
 
   addEnv(...env: EvalEnv[]) {
-    // super.addEnv(...env);
     this.abs.addEnv(...env);
     this.arg.addEnv(...env);
   }
 
   evaluate() {
     const before = this.toString()
-    console.log('evaluate<Application>:', before);
-    super.evaluate();
+    log('evaluate<Application>:', before);
     const abs = this.abs.evaluate();
     const arg = this.arg.evaluate();
-    console.log('applicating of', abs.toString(), 'with', arg.toString(), 'from', before);
+    log('applicating of', abs.toString(), 'with', arg.toString(), 'from', before);
    
     return concrete([ abs, arg ], ([ abs, arg ]) => {
-      let result;
+      let result: Term | Promise<Term>;
       if (abs instanceof Lambda) {
         const newEnv = new EvalEnv(abs.arg.label, arg);
         abs.body.addEnv(newEnv);
-        // console.log('application env:', abs.body.env.toString());
-
         result = abs.body.evaluate();
       }
-      if (abs instanceof Primitive) {
-        // console.log('primitive function:', abs);
-        
+      if (abs instanceof Primitive) {        
         result = abs.func(arg);
       }
-      console.log('result<Application> of', before, ': \n\t', result.toString());
+      log('result<Application> of', before, ': \n\t', result.toString());
       return result;
     });
   }
@@ -364,12 +353,12 @@ export class Application extends Term {
   }
 
   static fromObject(term: any) {
-    return new Application(Term.fromObject(term.abs), Term.fromObject(term.arg));
+    return new Application(fromObject(term.abs), fromObject(term.arg));
   }
 }
 
 export class Future extends Term {
-  name: string = Future.name;
+  kind: Kind = Kind.Future;
   term: Term;
 
   constructor(term: Term) {
@@ -378,47 +367,33 @@ export class Future extends Term {
   }
 
   addEnv(...env: EvalEnv[]) {
-    // super.addEnv(...env);
     this.term.addEnv(...env);
   }
 
   evaluate() {
-    console.log('evaluate<Future>:', this.toString());
-    // console.log(inspect(this.term, { depth: Infinity, colors: true }));
-    
+    log('evaluate<Future>:', this.toString());;
 
     const child = fork(path.join(__dirname, './child'));
 
     child.on('error', (e) => {
-      console.error('<!> error in child process:', e);
+      error('<!> error in child process:', e);
       throw e;
     });
 
     return new Promise<Term>((resolve, reject) => {
-      child.on('message', ({ term: evaluated, error }: FutureMessage) => {
+      child.on('message', ({ term: evaluated, error }: ProcessMessage) => {
         if (error) {
           reject(error);
         } else {
-          resolve(Term.fromObject(evaluated));
+          resolve(fromObject(evaluated));
         }
       });
 
-      const message: FutureMessage = {
+      const message: ProcessMessage = {
         term: this.term,
       };
       child.send(message);
     });
-
-    // return new Promise<Term>(resolve => resolve(this.term.evaluate()));
-
-    // return new Promise<Term>((resolve) => {
-    //   if (!FUTURE_DELAY_MAX) {
-    //     resolve(this.term.evaluate());
-    //   } else {
-    //     const delay = Math.floor(Math.random() * FUTURE_DELAY_MAX);
-    //     setTimeout(() => resolve(this.term.evaluate()), delay);
-    //   }
-    // });
   }
   
   toString() {
@@ -426,6 +401,6 @@ export class Future extends Term {
   }
 
   static fromObject(term: any) {
-    return new Future(Term.fromObject(term.term));
+    return new Future(fromObject(term.term));
   }
 }

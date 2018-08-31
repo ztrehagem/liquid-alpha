@@ -1,3 +1,4 @@
+import { log, warn, error, inspect } from './logger';
 import * as tkn from './token';
 
 export default class Lexper {
@@ -39,7 +40,7 @@ export default class Lexper {
         continue;
       }
 
-      console.warn("couldn't tokenize:", word);
+      warn("couldn't tokenize:", word);
     }
 
     return this.tokens;

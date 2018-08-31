@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const logger_1 = require("./logger");
 const tkn = require("./token");
 class Lexper {
     constructor(code) {
@@ -27,7 +28,7 @@ class Lexper {
                 this.tokens.push(token);
                 continue;
             }
-            console.warn("couldn't tokenize:", word);
+            logger_1.warn("couldn't tokenize:", word);
         }
         return this.tokens;
     }

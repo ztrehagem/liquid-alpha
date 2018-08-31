@@ -1,11 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const util_1 = require("util");
 const iterator_1 = require("./util/iterator");
 const tkn = require("./token");
 const trm = require("./term");
 const typ = require("./type");
-const deep = (obj) => util_1.inspect(obj, { depth: Infinity, colors: true });
 const log = (str, obj) => {
 };
 const isInstance = (instance, ...classes) => classes.some(clazz => instance instanceof clazz);

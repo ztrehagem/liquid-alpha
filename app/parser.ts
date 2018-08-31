@@ -1,12 +1,11 @@
-import { inspect } from 'util';
+import { log as llog, inspect } from './logger';
 import Iterator from './util/iterator';
 import * as tkn from './token';
 import * as trm from './term';
 import * as typ from './type';
 
-const deep = (obj: any) => inspect(obj, { depth: Infinity, colors: true });
 const log = (str: string, obj: any) => {
-  // console.log(str, deep(obj));
+  // llog(str, inspect(obj));
 }
 const isInstance = (instance: Object, ...classes: Function[]) => classes.some(clazz => instance instanceof clazz);
 

@@ -1,38 +1,38 @@
-import { inspect } from 'util';
+import { log, inspect } from './app/logger';
 import Lexer from './app/lexer';
 import Parser from './app/parser';
 
 export const exec = async (lqd: string) => {
   try {
-    console.log('-------- Liquid --------');
-    console.log(lqd);
-    console.log('-------- tokenize --------');
+    log('-------- Liquid --------');
+    log(lqd);
+    log('\n-------- tokenize --------');
     const tokens = new Lexer(lqd).tokenize();
-    console.log(tokens);
-    console.log('-------- parse --------');
+    inspect(tokens, 1);
+    log('\n-------- parse --------');
     const ast = new Parser(tokens).parse();
-    console.log(inspect(ast, { depth: Infinity, colors: true }));
-    console.log('-------- type check --------');
+    inspect(ast);
+    log('\n-------- type check --------');
     ast.checkType();
-    console.log(inspect(ast, { depth: Infinity, colors: true }));
-    console.log('-------- compile --------');
+    inspect(ast);
+    log('\n-------- compile --------');
     const compiled = ast.compile();
-    console.log(inspect(compiled, { depth: Infinity, colors: true }));
-    console.log('-------- core Liquid --------');
-    console.log(compiled.toString());
-    console.log('-------- evaluate --------');
+    inspect(compiled);
+    log('\n-------- core Liquid --------');
+    log(compiled.toString());
+    log('\n-------- evaluate --------');
     const evaluated = await compiled.evaluate();
-    console.log('-------- result --------');
-    console.log(inspect(evaluated, { depth: Infinity, colors: true }));
-    console.log('-------- readable --------');
-    console.log(evaluated.toString());
+    log('\n-------- result --------');
+    inspect(evaluated);
+    log('\n-------- readable --------');
+    log(evaluated.toString());
   } catch (error) {
-    console.error('-------- error --------');
-    console.error(error);
+    error('\n-------- error --------');
+    error(error);
   }
 
-  // console.log('-------- generate --------');
+  // log('-------- generate --------');
   // const js = escodegen.generate(ast);
-  // console.log('-------- output --------');
-  // console.log(js);
+  // log('-------- output --------');
+  // log(js);
 };

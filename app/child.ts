@@ -1,21 +1,23 @@
-import { inspect } from 'util';
-import { Term, FutureMessage } from './clterm';
+import { setChild, log, error, inspect } from './logger';
+import { fromObject, ProcessMessage } from './clterm';
 
-process.on('message', async ({ term: obj }: FutureMessage) => {
+setChild(true);
+
+process.on('message', async ({ term: obj }: ProcessMessage) => {
   try {
-    // console.log('<recv>', inspect(obj, { depth: Infinity, colors: true }));
+    // log('<recv>', inspect(obj));
     
-    const term = Term.fromObject(obj);
-    // console.log('<future>', inspect(term, { depth: Infinity, colors: true }));
+    const term = fromObject(obj);
+    // log('<future>', inspect(term));
     const evaluated = await term.evaluate();
-    const message: FutureMessage = {
+    const message: ProcessMessage = {
       term: evaluated,
     };
     process.send(message, () => process.exit());    
   } catch (error) {
-    console.error('<!> error in future process');
-    console.error(error);
-    const message: FutureMessage = {
+    error('<!> error in future process');
+    error(error);
+    const message: ProcessMessage = {
       term: null,
       error: error.message,
     };
