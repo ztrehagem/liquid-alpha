@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const logger_1 = require("./logger");
 const clterm_1 = require("./clterm");
 logger_1.setChild(true);
+logger_1.setSilent(!!process.env.SILENT);
 process.on('message', async ({ term: obj }) => {
     try {
         const term = clterm_1.fromObject(obj);

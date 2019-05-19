@@ -1,7 +1,8 @@
-import { setChild, log, error, inspect } from './logger';
+import { setChild, setSilent, log, error, inspect } from './logger';
 import { fromObject, ProcessMessage } from './clterm';
 
 setChild(true);
+setSilent(!!process.env.SILENT);
 
 process.on('message', async ({ term: obj }: ProcessMessage) => {
   try {

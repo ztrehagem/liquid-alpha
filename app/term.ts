@@ -17,6 +17,10 @@ export class Term {
   compile() {
     return new clt.Term();
   }
+
+  get size() {
+    return 1;
+  }
 }
 
 export class Variable extends Term {
@@ -34,6 +38,10 @@ export class Variable extends Term {
 
   compile() {
     return new clt.Variable(this.label);
+  }
+
+  get size() {
+    return 1;
   }
 }
 
@@ -59,6 +67,10 @@ export class Primitive extends Term {
       default: return null;
     }
   }
+
+  get size() {
+    return 1;
+  }
 }
 
 export class Value extends Term {
@@ -82,6 +94,10 @@ export class Value extends Term {
       case typ.NUMBER: return new clt.Value(parseFloat(this.str));
       default: return null;
     }
+  }
+  
+  get size() {
+    return 1;
   }
 }
 
@@ -107,6 +123,10 @@ export class Let extends Term {
     const abs = new clt.Lambda(this.arg.compile(), this.body.compile());
     return new clt.Application(abs, this.bound.compile());
   }
+
+  get size() {
+    return this.bound.size + this.body.size + 1;
+  }
 }
 
 export class Fun extends Term {
@@ -129,6 +149,10 @@ export class Fun extends Term {
 
   compile() {
     return new clt.Lambda(this.arg.compile(), this.body.compile());
+  }
+  
+  get size() {
+    return this.body.size + 1;
   }
 }
 
@@ -163,6 +187,10 @@ export class Pair extends Term {
   compile() {
     return new clt.Pair(this.car.compile(), this.cdr.compile());
   }
+
+  get size() {
+    return this.car.size + this.cdr.size + 1;
+  }
 }
 
 export class PairCar extends Term {
@@ -183,6 +211,10 @@ export class PairCar extends Term {
   compile() {
     return new clt.PairCar(this.pair.compile());
   }
+
+  get size() {
+    return this.pair.size + 1;
+  }
 }
 
 export class PairCdr extends Term {
@@ -202,6 +234,10 @@ export class PairCdr extends Term {
 
   compile() {
     return new clt.PairCdr(this.pair.compile());
+  }
+
+  get size() {
+    return this.pair.size + 1;
   }
 }
 
@@ -229,5 +265,9 @@ export class Application extends Term {
   compile() {
     const app = new clt.Application(this.abs.compile(), this.arg.compile());
     return (this.abs.type instanceof typ.AsyncFunType) ? new clt.Future(app) : app;
+  }
+
+  get size() {
+    return this.abs.size + this.arg.size + 1;
   }
 }

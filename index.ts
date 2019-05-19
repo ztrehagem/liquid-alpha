@@ -1,8 +1,14 @@
-import { log, inspect } from './app/logger';
+import { log, inspect, setSilent } from './app/logger';
 import Lexer from './app/lexer';
 import Parser from './app/parser';
 
-export const exec = async (lqd: string) => {
+export type Options = {
+  silent?: boolean,
+};
+
+export const exec = async (lqd: string, options: Options = {}) => {
+  setSilent(!!options.silent);
+
   try {
     log('-------- Liquid --------');
     log(lqd);
@@ -12,6 +18,8 @@ export const exec = async (lqd: string) => {
     log('\n-------- parse --------');
     const ast = new Parser(tokens).parse();
     inspect(ast);
+    log('\n-------- size --------');
+    log(ast.size);
     log('\n-------- type check --------');
     ast.checkType();
     inspect(ast);

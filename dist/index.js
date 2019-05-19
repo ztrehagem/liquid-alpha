@@ -3,7 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const logger_1 = require("./app/logger");
 const lexer_1 = require("./app/lexer");
 const parser_1 = require("./app/parser");
-exports.exec = async (lqd) => {
+exports.exec = async (lqd, options = {}) => {
+    logger_1.setSilent(!!options.silent);
     try {
         logger_1.log('-------- Liquid --------');
         logger_1.log(lqd);
@@ -13,6 +14,8 @@ exports.exec = async (lqd) => {
         logger_1.log('\n-------- parse --------');
         const ast = new parser_1.default(tokens).parse();
         logger_1.inspect(ast);
+        logger_1.log('\n-------- size --------');
+        logger_1.log(ast.size);
         logger_1.log('\n-------- type check --------');
         ast.checkType();
         logger_1.inspect(ast);

@@ -12,4 +12,4 @@ if (!filename) {
 
 const resolvedPath = path.resolve(filename);
 const code = fs.readFileSync(resolvedPath).toString();
-liquid.exec(code);
+liquid.exec(code, { silent: !!process.env.SILENT });
